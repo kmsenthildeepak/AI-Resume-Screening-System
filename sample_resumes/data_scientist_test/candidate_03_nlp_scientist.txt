@@ -1,0 +1,15 @@
+Clara Evans
+Email: clara.evans@example.com
+Phone: +1 555-010-1003
+
+Professional Summary:
+NLP Scientist focusing on conversational AI and text embeddings.
+
+Technical Competencies:
+Python, NLP, Machine Learning, Scikit-Learn, Pandas, NumPy, Statistics, SQL
+
+Experience:
+Research Scientist - Led text mining, sentiment analysis, and NLP model training.
+
+Education:
+PhD in Computational Linguistics, MIT

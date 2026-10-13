@@ -1,0 +1,15 @@
+Frank Miller
+Email: frank.miller@example.com
+Phone: +1 555-010-1006
+
+Professional Summary:
+Business Intelligence Analyst specialized in data warehousing and reporting.
+
+Technical Competencies:
+SQL, Tableau, Power BI, Excel, Business Intelligence
+
+Experience:
+BI Analyst - Built SQL ETL workflows and KPI executive dashboards.
+
+Education:
+Bachelor of Business Administration in Information Systems

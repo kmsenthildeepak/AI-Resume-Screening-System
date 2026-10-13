@@ -1,0 +1,20 @@
+# AI Resume Screening System - Dependencies
+# Python 3.11+ compatible configuration
+
+# Web Dashboard Framework
+streamlit>=1.35.0
+
+# Natural Language Processing & Machine Learning
+scikit-learn>=1.4.0
+numpy>=1.26.0
+
+# Document Parsers & Generation
+pypdf>=4.0.0
+python-docx>=1.1.0
+reportlab>=4.0.0
+
+# Automated Testing
+pytest>=8.0.0
+
+# PyArrow (Fast columnar data processing & Streamlit data display support)
+pyarrow>=15.0.0

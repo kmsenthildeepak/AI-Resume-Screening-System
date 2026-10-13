@@ -1,0 +1,55 @@
+# Python virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# Python byte-code and cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+.pytest_cache/
+
+# Streamlit logs and cache
+.streamlit/
+
+# OS-generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Temporary outputs
+*.log
+*.tmp
+temp/
+scratch/
+dist/
+build/
+*.egg-info/
+
+# Node.js dependencies and generated builds
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Local uploaded resumes and private data
+uploads/
+uploaded_resumes/
+private_data/
+
+# Local test artifacts and submission archive
+screenshots/
+*_verified.png
+AI_Resume_Screening_System_Submission.zip
+
+# Root-level npm dependencies
+/node_modules/

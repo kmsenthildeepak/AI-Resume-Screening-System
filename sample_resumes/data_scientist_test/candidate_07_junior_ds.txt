@@ -1,0 +1,15 @@
+Grace Hopper
+Email: grace.hopper@example.com
+Phone: +1 555-010-1007
+
+Professional Summary:
+Junior Data Scientist with academic foundation in machine learning and mathematical statistics.
+
+Technical Competencies:
+Python, Machine Learning, Pandas, NumPy, Scikit-Learn, Statistics, SQL
+
+Experience:
+Data Science Intern - Implemented classification algorithms in Python with Scikit-Learn.
+
+Education:
+Bachelor of Science in Applied Mathematics, NYU

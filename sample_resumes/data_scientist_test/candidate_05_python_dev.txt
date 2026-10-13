@@ -1,0 +1,15 @@
+Elena Rostova
+Email: elena.rostova@example.com
+Phone: +1 555-010-1005
+
+Professional Summary:
+Python Developer with backend and data pipeline experience.
+
+Technical Competencies:
+Python, SQL, PostgreSQL, Docker, Git, REST APIs, Pandas
+
+Experience:
+Backend Software Engineer - Maintained Python data processing microservices.
+
+Education:
+Bachelor of Science in Software Engineering, Georgia Tech

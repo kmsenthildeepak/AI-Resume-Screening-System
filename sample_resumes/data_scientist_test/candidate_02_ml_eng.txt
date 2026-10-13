@@ -1,0 +1,15 @@
+Brian Chen
+Email: brian.chen@example.com
+Phone: +1 555-010-1002
+
+Professional Summary:
+Machine Learning Engineer specializing in deep learning architectures and NLP applications.
+
+Technical Competencies:
+Python, Machine Learning, Deep Learning, TensorFlow, NLP, PyTorch, Scikit-Learn, SQL, Pandas
+
+Experience:
+ML Engineer at Visionary AI - Developed transformer NLP models and deep learning pipelines in Python and TensorFlow.
+
+Education:
+Bachelor of Science in Computer Science, UC Berkeley

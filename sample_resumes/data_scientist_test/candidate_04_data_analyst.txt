@@ -1,0 +1,15 @@
+Daniel Rodriguez
+Email: daniel.rodriguez@example.com
+Phone: +1 555-010-1004
+
+Professional Summary:
+Data Analyst with quantitative background transitioning into predictive analytics.
+
+Technical Competencies:
+SQL, Python, Pandas, NumPy, Statistics, Tableau, Excel
+
+Experience:
+Data Analyst at FinTech Solutions - Conducted statistical analysis and cohort modeling using SQL and Python.
+
+Education:
+Bachelor of Science in Statistics, University of Washington

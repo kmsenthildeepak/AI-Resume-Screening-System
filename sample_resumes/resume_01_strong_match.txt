@@ -1,0 +1,29 @@
+Alex Morgan
+Email: alex.morgan@example.com
+Phone: +1 555-019-2834
+Location: Seattle, WA
+
+PROFESSIONAL SUMMARY
+Senior Java Backend Engineer with 6+ years of experience designing scalable microservices, high-throughput RESTful APIs, and enterprise cloud systems. Proven track record in optimizing PostgreSQL databases, event streaming with Kafka, and continuous delivery pipelines on AWS.
+
+TECHNICAL SKILLS
+- Programming Languages: Java, SQL, Python
+- Frameworks & Architecture: Spring Boot, Microservices, REST API, Hibernate
+- Databases & Caching: PostgreSQL, MySQL, Redis
+- Cloud & DevOps: AWS, Docker, Kubernetes, Git, CI/CD, Linux
+- Messaging & Tools: Kafka, Agile, Jira
+
+WORK EXPERIENCE
+Senior Software Engineer | CloudTech Solutions (2021 - Present)
+- Architected enterprise microservices utilizing Java, Spring Boot, and PostgreSQL, serving 5M+ daily requests.
+- Implemented distributed event-driven data streaming pipelines with Apache Kafka and Redis caching.
+- Containerized applications using Docker and orchestrated deployments on AWS ECS and Kubernetes.
+- Collaborated in an Agile Scrum team, leading bi-weekly sprint planning and code reviews.
+
+Software Developer | NextGen Systems (2018 - 2021)
+- Developed secure REST APIs with Spring Boot, reducing response latency by 35%.
+- Maintained relational schemas, automated database migrations, and tuned SQL queries.
+- Built automated CI/CD deployment pipelines using Git and Jenkins.
+
+EDUCATION
+Bachelor of Science in Computer Science | University of Washington (2014 - 2018)
