@@ -339,7 +339,9 @@ def setup_theme_and_styles():
         }
 
         /* Buttons with tactile hover and focus */
-        .stButton > button {
+        /* Buttons with tactile hover, focus, and explicit enterprise light theme styling */
+        .stButton > button,
+        button[data-testid^="stBaseButton-"] {
             border-radius: var(--ats-radius-sm) !important;
             font-weight: 600 !important;
             font-size: 0.8125rem !important;
@@ -347,38 +349,101 @@ def setup_theme_and_styles():
             transition: var(--ats-transition) !important;
             box-shadow: var(--ats-shadow-sm) !important;
             padding: 0.5rem 1rem !important;
+            cursor: pointer !important;
         }
-        .stButton > button:focus-visible {
+        .stButton > button:focus-visible,
+        button[data-testid^="stBaseButton-"]:focus-visible {
             outline: none !important;
             box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.25) !important;
         }
-        .stButton > button[kind="primary"], .stButton > button[data-testid="baseButton-primary"] {
-            background-color: var(--ats-primary) !important;
-            color: #FFFFFF !important;
-            border: 1px solid var(--ats-primary) !important;
+
+        /* Default & Secondary Buttons (Clean Light Background with Dark Text) */
+        .stButton > button,
+        .stButton > button[kind="secondary"],
+        .stButton > button[data-testid="baseButton-secondary"],
+        button[data-testid="stBaseButton-secondary"] {
+            background-color: #FFFFFF !important;
+            color: #1E293B !important;
+            border: 1px solid #CBD5E1 !important;
         }
-        .stButton > button[kind="primary"]:hover {
-            background-color: var(--ats-primary-hover) !important;
-            border-color: var(--ats-primary-hover) !important;
-            color: #FFFFFF !important;
-            box-shadow: var(--ats-shadow-md) !important;
-            transform: translateY(-1px);
+        .stButton > button p,
+        .stButton > button span,
+        .stButton > button div,
+        button[data-testid="stBaseButton-secondary"] p,
+        button[data-testid="stBaseButton-secondary"] span,
+        button[data-testid="stBaseButton-secondary"] div {
+            color: #1E293B !important;
         }
-        .stButton > button[kind="secondary"], .stButton > button[data-testid="baseButton-secondary"] {
-            background-color: var(--ats-surface) !important;
-            color: #334155 !important;
-            border: 1px solid var(--ats-border) !important;
-        }
-        .stButton > button[kind="secondary"]:hover {
+        .stButton > button:hover,
+        .stButton > button[kind="secondary"]:hover,
+        .stButton > button[data-testid="baseButton-secondary"]:hover,
+        button[data-testid="stBaseButton-secondary"]:hover {
             background-color: #F8FAFC !important;
             border-color: #94A3B8 !important;
-            color: var(--ats-navy-dark) !important;
+            color: #0F172A !important;
             box-shadow: var(--ats-shadow-sm) !important;
         }
-        .stButton > button:disabled {
-            opacity: 0.6 !important;
+        .stButton > button:active,
+        .stButton > button[kind="secondary"]:active,
+        button[data-testid="stBaseButton-secondary"]:active {
+            background-color: #F1F5F9 !important;
+            border-color: #64748B !important;
+            color: #0F172A !important;
+        }
+
+        /* Primary Action Buttons (e.g. "Analyze & Rank Candidates" - Preserved Red Accent) */
+        .stButton > button[kind="primary"],
+        .stButton > button[data-testid="baseButton-primary"],
+        button[data-testid="stBaseButton-primary"] {
+            background-color: #FF4B4B !important;
+            color: #FFFFFF !important;
+            border: 1px solid #FF4B4B !important;
+            box-shadow: 0 1px 3px rgba(255, 75, 75, 0.25) !important;
+        }
+        .stButton > button[kind="primary"] p,
+        .stButton > button[kind="primary"] span,
+        .stButton > button[kind="primary"] div,
+        button[data-testid="stBaseButton-primary"] p,
+        button[data-testid="stBaseButton-primary"] span,
+        button[data-testid="stBaseButton-primary"] div {
+            color: #FFFFFF !important;
+        }
+        .stButton > button[kind="primary"]:hover,
+        button[data-testid="stBaseButton-primary"]:hover {
+            background-color: #E03E3E !important;
+            border-color: #E03E3E !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 3px 6px rgba(255, 75, 75, 0.35) !important;
+            transform: translateY(-1px);
+        }
+        .stButton > button[kind="primary"]:active,
+        button[data-testid="stBaseButton-primary"]:active {
+            background-color: #C83232 !important;
+            border-color: #C83232 !important;
+            color: #FFFFFF !important;
+            transform: translateY(0);
+        }
+
+        /* Disabled Button State (Readable muted appearance on light surface) */
+        .stButton > button:disabled,
+        .stButton > button[kind="primary"]:disabled,
+        .stButton > button[kind="secondary"]:disabled,
+        button[data-testid^="stBaseButton-"]:disabled {
+            background-color: #F1F5F9 !important;
+            border-color: #E2E8F0 !important;
+            color: #94A3B8 !important;
+            opacity: 0.8 !important;
             cursor: not-allowed !important;
             transform: none !important;
+            box-shadow: none !important;
+        }
+        .stButton > button:disabled p,
+        .stButton > button:disabled span,
+        .stButton > button:disabled div,
+        button[data-testid^="stBaseButton-"]:disabled p,
+        button[data-testid^="stBaseButton-"]:disabled span,
+        button[data-testid^="stBaseButton-"]:disabled div {
+            color: #94A3B8 !important;
         }
 
         /* Modern Aceternity UI Inspired File Uploader */
@@ -403,6 +468,38 @@ def setup_theme_and_styles():
         [data-testid="stFileUploaderDropzoneInstructions"] {
             color: var(--ats-text-muted) !important;
             font-size: 0.8125rem !important;
+        }
+        /* File Uploader Browse/Upload Button (Light Background with Dark Readable Text) */
+        [data-testid="stFileUploader"] button,
+        [data-testid="stFileUploaderDropzone"] button,
+        [data-testid="stFileUploader"] button[data-testid^="stBaseButton-"],
+        [data-testid="stFileUploaderDropzone"] button[data-testid^="stBaseButton-"] {
+            background-color: #FFFFFF !important;
+            color: #1E293B !important;
+            border: 1px solid #CBD5E1 !important;
+            border-radius: var(--ats-radius-sm) !important;
+            font-weight: 600 !important;
+            box-shadow: var(--ats-shadow-sm) !important;
+        }
+        [data-testid="stFileUploader"] button p,
+        [data-testid="stFileUploader"] button span,
+        [data-testid="stFileUploader"] button div,
+        [data-testid="stFileUploaderDropzone"] button p,
+        [data-testid="stFileUploaderDropzone"] button span,
+        [data-testid="stFileUploaderDropzone"] button div {
+            color: #1E293B !important;
+        }
+        [data-testid="stFileUploader"] button:hover,
+        [data-testid="stFileUploaderDropzone"] button:hover {
+            background-color: #F8FAFC !important;
+            border-color: #94A3B8 !important;
+            color: #0F172A !important;
+        }
+        [data-testid="stFileUploader"] button:active,
+        [data-testid="stFileUploaderDropzone"] button:active {
+            background-color: #F1F5F9 !important;
+            border-color: #64748B !important;
+            color: #0F172A !important;
         }
 
         /* Streamlit Native Container Cards */
