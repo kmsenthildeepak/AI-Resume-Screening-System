@@ -323,6 +323,52 @@ def setup_theme_and_styles():
             outline: none !important;
         }
 
+        /* High-Contrast Accessible Raw Resume Viewer (Scoped Strictly to Dossier Extracted Resume Text) */
+        div[data-testid="stTabPanel"] textarea[aria-label="Extracted Resume Text"],
+        textarea[aria-label="Extracted Resume Text"],
+        div[class*="st-key-raw_text_"] textarea {
+            background-color: #F8FAFC !important;
+            color: #0F172A !important;
+            -webkit-text-fill-color: #0F172A !important;
+            opacity: 1 !important;
+            cursor: text !important;
+            pointer-events: auto !important;
+            overflow-y: auto !important;
+            border: 1px solid #CBD5E1 !important;
+            border-radius: var(--ats-radius-sm) !important;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+            font-size: 0.8125rem !important;
+            line-height: 1.6 !important;
+            white-space: pre-wrap !important;
+            word-break: break-word !important;
+            box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+            user-select: text !important;
+            -webkit-user-select: text !important;
+        }
+        div[data-testid="stTabPanel"] [data-testid="stTextAreaRootElement"],
+        div[class*="st-key-raw_text_"] [data-testid="stTextAreaRootElement"],
+        div[data-testid="stTextAreaRootElement"]:has(textarea[aria-label="Extracted Resume Text"]) {
+            background-color: #F8FAFC !important;
+            border-color: #CBD5E1 !important;
+            border-radius: var(--ats-radius-sm) !important;
+        }
+        div[data-testid="stTabPanel"] textarea[aria-label="Extracted Resume Text"]:focus,
+        textarea[aria-label="Extracted Resume Text"]:focus {
+            border-color: #94A3B8 !important;
+            outline: none !important;
+            box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.06) !important;
+        }
+        @media (prefers-color-scheme: dark) {
+            [data-theme="dark"] textarea[aria-label="Extracted Resume Text"],
+            .stApp[data-theme="dark"] textarea[aria-label="Extracted Resume Text"],
+            [data-theme="dark"] div[class*="st-key-raw_text_"] textarea {
+                background-color: #0F172A !important;
+                border-color: #334155 !important;
+                color: #F8FAFC !important;
+                -webkit-text-fill-color: #F8FAFC !important;
+            }
+        }
+
         /* Selectboxes */
         div[data-baseweb="select"] > div {
             background-color: var(--ats-surface) !important;
@@ -1890,11 +1936,15 @@ def render_page_review():
 
             with tab_raw:
                 raw_text = selected.get("raw_text", "")
-                if len(raw_text) > MAX_TEXT_PREVIEW_CHARS:
-                    preview = raw_text[:MAX_TEXT_PREVIEW_CHARS] + "\n\n... [Preview truncated for display]"
-                else:
-                    preview = raw_text
-                st.text_area("Extracted Resume Text", value=preview, height=220, disabled=True, label_visibility="collapsed")
+                display_text = raw_text.strip() if raw_text and raw_text.strip() else "No raw document text available for this candidate."
+                st.text_area(
+                    "Extracted Resume Text",
+                    value=display_text,
+                    height=280,
+                    disabled=True,
+                    label_visibility="collapsed",
+                    key=f"raw_text_{selected.get('candidate_id', 'curr')}"
+                )
 
 
 def seed_default_candidates():
