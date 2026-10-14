@@ -465,9 +465,59 @@ def setup_theme_and_styles():
             border: none !important;
             padding: 1.25rem !important;
         }
-        [data-testid="stFileUploaderDropzoneInstructions"] {
-            color: var(--ats-text-muted) !important;
+        [data-testid="stFileUploaderDropzoneInstructions"],
+        [data-testid="stFileUploaderDropzoneInstructions"] *,
+        [data-testid="stFileUploaderDropzone"] span {
+            color: #334155 !important;
             font-size: 0.8125rem !important;
+            font-weight: 500 !important;
+        }
+        /* Scoped style for the file limits and accepted types helper */
+        [data-testid="stFileUploaderDropzoneInstructions"] small,
+        [data-testid="stFileUploaderDropzoneInstructions"] span:last-child {
+            color: #475569 !important;
+            font-weight: 500 !important;
+        }
+
+        /* Tooltip and Help Popovers (High Contrast & Clear Readability in All Modes) */
+        div[data-baseweb="tooltip"],
+        div[data-baseweb="tooltip"] > div,
+        [data-testid="stTooltipContent"],
+        [data-testid="stTooltipContent"] * {
+            background-color: #0F172A !important;
+            color: #F8FAFC !important;
+            border-radius: var(--ats-radius-sm) !important;
+            font-size: 0.8125rem !important;
+            font-weight: 400 !important;
+            line-height: 1.45 !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2) !important;
+        }
+        div[data-baseweb="tooltip"] {
+            border: 1px solid #334155 !important;
+        }
+        [data-testid="stTooltipHoverTarget"] {
+            color: #475569 !important;
+        }
+        [data-testid="stTooltipHoverTarget"]:hover {
+            color: var(--ats-primary) !important;
+        }
+
+        /* Captions and Informational Explanatory Text */
+        [data-testid="stCaptionContainer"],
+        [data-testid="stCaptionContainer"] p {
+            color: #475569 !important;
+            font-size: 0.8125rem !important;
+            line-height: 1.4 !important;
+        }
+
+        /* Streamlit Info, Warning, and Alert Callouts */
+        [data-testid="stAlert"] {
+            border-radius: var(--ats-radius-sm) !important;
+            font-size: 0.8125rem !important;
+        }
+        [data-testid="stAlert"] [data-testid="stMarkdownContainer"] p,
+        [data-testid="stAlert"] [data-testid="stMarkdownContainer"] span {
+            color: #1E293B !important;
         }
         /* File Uploader Browse/Upload Button (Light Background with Dark Readable Text) */
         [data-testid="stFileUploader"] button,
