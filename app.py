@@ -893,11 +893,30 @@ def setup_theme_and_styles():
             border-color: var(--ats-success-border);
             font-weight: 600;
         }
+        .tag-pill-pref {
+            background-color: #EFF6FF;
+            color: #1E40AF;
+            border-color: #BFDBFE;
+            font-weight: 600;
+        }
         .tag-pill-missing {
             background-color: #F8FAFC;
             color: var(--ats-text-muted);
             border-color: var(--ats-border);
         }
+        .tag-tier-badge {
+            font-size: 0.625rem;
+            padding: 0.1rem 0.35rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            margin-left: 0.35rem;
+            letter-spacing: 0.02em;
+        }
+        .tier-achievement { background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
+        .tier-experience { background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; }
+        .tier-project { background: #E0E7FF; color: #3730A3; border: 1px solid #C7D2FE; }
+        .tier-list { background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; }
+        .tier-mention { background: #F8FAFC; color: #64748B; border: 1px solid #E2E8F0; }
 
         /* Score visual indicator */
         .score-bar-bg {
@@ -1888,47 +1907,93 @@ def render_page_review():
                     st.markdown("<div style='font-size: 0.75rem; font-weight: 600; color: #667085; text-transform: uppercase;'>Scoring Components</div>", unsafe_allow_html=True)
                     st.markdown(f"<div style='font-size: 0.8125rem; margin-top: 0.35rem;'>Textual Similarity: <strong>{selected.get('text_similarity_score', 0.0):.1f}%</strong></div>", unsafe_allow_html=True)
                     st.markdown(f"<div style='font-size: 0.8125rem; margin-top: 0.2rem;'>Competency Match: <strong>{selected.get('skill_match_score', 0.0):.1f}%</strong></div>", unsafe_allow_html=True)
+                    ev_cov = selected.get("evidence_coverage_score", 0.0)
+                    st.markdown(f"<div style='font-size: 0.8125rem; margin-top: 0.2rem;'>Evidence Coverage: <strong>{ev_cov:.1f}%</strong> <span style='font-size: 0.75rem; color: #64748B;'>(skills with work/project proof)</span></div>", unsafe_allow_html=True)
                     st.caption(selected.get("score_explanation", ""))
 
             with tab_skills:
-                matched = selected.get("matched_skills", [])
-                missing = selected.get("missing_skills", [])
+                matched_req = selected.get("matched_required_skills", selected.get("matched_skills", []))
+                missing_req = selected.get("missing_required_skills", selected.get("missing_skills", []))
+                matched_pref = selected.get("matched_preferred_skills", [])
+                missing_pref = selected.get("missing_preferred_skills", [])
                 candidate_all = selected.get("candidate_skills", [])
+                skill_evidence = selected.get("skill_evidence", {})
 
-                st.markdown(f"<div style='font-size: 0.8125rem; font-weight: 600; color: #166534; margin-bottom: 0.35rem;'>Matched Competencies ({len(matched)}):</div>", unsafe_allow_html=True)
-                if matched:
-                    badges_m = " ".join([f"<span class='tag-pill tag-pill-match'>{html.escape(s)}</span>" for s in matched])
-                    st.markdown(f"<div style='display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem;'>{badges_m}</div>", unsafe_allow_html=True)
-                else:
-                    st.caption("No cataloged role competencies matched in document text.")
+                def render_skill_badge(skill_name, is_matched, is_preferred=False):
+                    ev = skill_evidence.get(skill_name, {})
+                    tier = ev.get("tier", "mention_only")
+                    tier_map = {
+                        "achievement": ("🏆 Impact", "tier-achievement"),
+                        "work_experience": ("⚡ Experience", "tier-experience"),
+                        "project": ("🛠️ Project", "tier-project"),
+                        "skills_list": ("📋 Skills List", "tier-list"),
+                        "mention_only": ("⚠️ Mention Only", "tier-mention")
+                    }
+                    lbl, cls = tier_map.get(tier, ("Mention", "tier-mention"))
+                    pill_cls = "tag-pill-match" if not is_preferred else "tag-pill-pref"
+                    return f"<span class='tag-pill {pill_cls}'>{html.escape(skill_name)} <span class='tag-tier-badge {cls}'>{lbl}</span></span>"
 
-                st.markdown(f"<div style='font-size: 0.8125rem; font-weight: 600; color: #4B5563; margin-bottom: 0.35rem;'>Unmatched Role Competencies ({len(missing)}):</div>", unsafe_allow_html=True)
-                if missing:
-                    badges_u = " ".join([f"<span class='tag-pill tag-pill-missing'>{html.escape(s)}</span>" for s in missing])
+                # 1. Required Role Competencies
+                st.markdown(f"<div style='font-size: 0.8125rem; font-weight: 700; color: #0F172A; margin-bottom: 0.35rem;'>Required Competencies ({len(matched_req)} / {len(matched_req) + len(missing_req)} matched):</div>", unsafe_allow_html=True)
+                if matched_req:
+                    badges_m = " ".join([render_skill_badge(s, True, False) for s in matched_req])
+                    st.markdown(f"<div style='display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem;'>{badges_m}</div>", unsafe_allow_html=True)
+                if missing_req:
+                    badges_u = " ".join([f"<span class='tag-pill tag-pill-missing'>{html.escape(s)} (missing)</span>" for s in missing_req])
                     st.markdown(f"<div style='display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem;'>{badges_u}</div>", unsafe_allow_html=True)
-                else:
-                    st.caption("All role competencies matched.")
+                elif not matched_req:
+                    st.caption("No explicit required competencies specified in Job Description.")
 
+                # 2. Preferred / Bonus Competencies
+                if matched_pref or missing_pref:
+                    st.markdown(f"<div style='font-size: 0.8125rem; font-weight: 700; color: #1E40AF; margin-top: 0.5rem; margin-bottom: 0.35rem;'>Preferred / Bonus Competencies ({len(matched_pref)} / {len(matched_pref) + len(missing_pref)} matched):</div>", unsafe_allow_html=True)
+                    if matched_pref:
+                        badges_pm = " ".join([render_skill_badge(s, True, True) for s in matched_pref])
+                        st.markdown(f"<div style='display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem;'>{badges_pm}</div>", unsafe_allow_html=True)
+                    if missing_pref:
+                        badges_pu = " ".join([f"<span class='tag-pill tag-pill-missing'>{html.escape(s)}</span>" for s in missing_pref])
+                        st.markdown(f"<div style='display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem;'>{badges_pu}</div>", unsafe_allow_html=True)
+
+                # 3. All Detected Skills
                 if candidate_all:
-                    st.markdown(f"<div style='font-size: 0.8125rem; font-weight: 600; color: #1E293B; margin-top: 0.75rem; margin-bottom: 0.35rem;'>All Detected Candidate Skills ({len(candidate_all)}):</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 0.8125rem; font-weight: 600; color: #475569; margin-top: 0.75rem; margin-bottom: 0.35rem;'>All Detected Candidate Skills ({len(candidate_all)}):</div>", unsafe_allow_html=True)
                     badges_cand = " ".join([f"<span class='tag-pill'>{html.escape(s)}</span>" for s in candidate_all])
                     st.markdown(f"<div style='display: flex; flex-wrap: wrap; gap: 0.35rem;'>{badges_cand}</div>", unsafe_allow_html=True)
 
             with tab_evidence:
+                st.caption("Evidence tiers and snippets provide qualitative explanation and audit verification for recruiters. They do not alter composite mathematical scores.")
                 ev_col1, ev_col2 = st.columns([1, 1])
                 with ev_col1:
-                    st.markdown("<div style='font-size: 0.75rem; font-weight: 600; color: #667085; text-transform: uppercase; margin-bottom: 0.35rem;'>Education Evidence</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='font-size: 0.75rem; font-weight: 600; color: #667085; text-transform: uppercase; margin-bottom: 0.35rem;'>Demonstrated Skill Evidence</div>", unsafe_allow_html=True)
+                    skill_ev = selected.get("skill_evidence", {})
+                    matched_all = selected.get("matched_skills", [])
+                    has_ev_quotes = False
+                    for sk in matched_all:
+                        data = skill_ev.get(sk, {})
+                        snippets = data.get("snippets", [])
+                        tier = data.get("tier", "mention_only")
+                        if snippets:
+                            has_ev_quotes = True
+                            tier_badge = "🏆 Impact Metric" if tier == "achievement" else ("⚡ Work Experience" if tier == "work_experience" else ("🛠️ Project" if tier == "project" else "📋 Skills List"))
+                            st.markdown(f"<div style='font-size: 0.8125rem; font-weight: 600; color: #1E3A8A; margin-top: 0.45rem;'>{html.escape(sk)} <span style='font-size: 0.6875rem; font-weight: 500; color: #64748B;'>({tier_badge})</span></div>", unsafe_allow_html=True)
+                            for snip in snippets[:2]:
+                                st.markdown(f"<div class='evidence-quote'>{html.escape(snip)}</div>", unsafe_allow_html=True)
+                    if not has_ev_quotes:
+                        st.caption("No contextual project or work experience sentences detected for matched skills.")
+
+                with ev_col2:
+                    st.markdown("<div style='font-size: 0.75rem; font-weight: 600; color: #667085; text-transform: uppercase; margin-bottom: 0.35rem;'>Education & Experience Evidence</div>", unsafe_allow_html=True)
                     edu_ev = selected.get("education_evidence", [])
+                    exp_ev = selected.get("experience_evidence", [])
                     if edu_ev:
+                        st.markdown("<div style='font-size: 0.75rem; font-weight: 600; color: #475569; margin-top: 0.25rem;'>Education Mentions:</div>", unsafe_allow_html=True)
                         for item in edu_ev:
                             st.markdown(f"<div class='evidence-quote'>{html.escape(item)}</div>", unsafe_allow_html=True)
                     else:
                         st.caption("No explicit degree keywords matched in resume text.")
 
-                with ev_col2:
-                    st.markdown("<div style='font-size: 0.75rem; font-weight: 600; color: #667085; text-transform: uppercase; margin-bottom: 0.35rem;'>Experience Evidence</div>", unsafe_allow_html=True)
-                    exp_ev = selected.get("experience_evidence", [])
                     if exp_ev:
+                        st.markdown("<div style='font-size: 0.75rem; font-weight: 600; color: #475569; margin-top: 0.5rem;'>Experience Indicators:</div>", unsafe_allow_html=True)
                         for item in exp_ev:
                             st.markdown(f"<div class='evidence-quote'>{html.escape(item)}</div>", unsafe_allow_html=True)
                     else:

@@ -11,6 +11,10 @@ SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt"}
 DEFAULT_WEIGHT_TEXT_SIMILARITY = 0.65
 DEFAULT_WEIGHT_SKILL_MATCH = 0.35
 
+# Category weights for skill matching (when both required and preferred skills are present)
+DEFAULT_REQUIRED_SKILL_WEIGHT = 0.80
+DEFAULT_PREFERRED_SKILL_WEIGHT = 0.20
+
 # Text length constraints
 MIN_JOB_DESCRIPTION_CHARS = 30
 MAX_TEXT_PREVIEW_CHARS = 1000
@@ -50,12 +54,12 @@ SKILL_TAXONOMY: Dict[str, List[str]] = {
 
     # Machine Learning & Data Science
     "Machine Learning": ["machine learning", "ml"],
-    "Deep Learning": ["deep learning", "dl"],
+    "Deep Learning": ["deep learning"],
     "Natural Language Processing": ["nlp", "natural language processing"],
     "Scikit-Learn": ["scikit-learn", "scikit learn", "sklearn"],
-    "TensorFlow": ["tensorflow", "tf"],
+    "TensorFlow": ["tensorflow"],
     "PyTorch": ["pytorch", "torch"],
-    "Computer Vision": ["computer vision", "cv", "opencv"],
+    "Computer Vision": ["computer vision", "opencv"],
     "Pandas": ["pandas"],
     "NumPy": ["numpy"],
     "Data Analysis": ["data analysis", "data analytics", "data mining"],

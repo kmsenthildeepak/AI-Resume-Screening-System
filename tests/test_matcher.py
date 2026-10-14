@@ -117,3 +117,132 @@ def test_deterministic_ranking():
     run2 = rank_resumes(jd, resumes)
     assert [r["overall_score"] for r in run1] == [r["overall_score"] for r in run2]
     assert [r["filename"] for r in run1] == [r["filename"] for r in run2]
+
+
+def test_empty_required_with_preferred_never_awards_free_credit():
+    """Verify that an empty required category does NOT award 1.0 (80%) free credit."""
+    job_req = []
+    job_pref = ["Docker", "AWS"]
+
+    # Candidate with 0 skills must get 0.0, not 0.80
+    res_zero = calculate_skill_match_score([], job_req, job_pref)
+    assert res_zero["score"] == 0.0
+    assert res_zero["required_score"] == 0.0
+    assert res_zero["preferred_score"] == 0.0
+
+    # Candidate matching 1 of 2 preferred skills gets 0.50, not 0.90
+    res_half = calculate_skill_match_score(["Docker"], job_req, job_pref)
+    assert pytest.approx(res_half["score"], 0.001) == 0.50
+    assert res_half["required_score"] == 0.0
+    assert pytest.approx(res_half["preferred_score"], 0.001) == 0.50
+
+
+def test_skill_match_categories_edge_cases():
+    """Test required-only, preferred-only, and empty-skill cases."""
+    # Required only
+    res_req = calculate_skill_match_score(["Python"], ["Python", "SQL"], [])
+    assert pytest.approx(res_req["score"], 0.001) == 0.50
+    assert res_req["has_job_skills"] is True
+
+    # Preferred only
+    res_pref = calculate_skill_match_score(["Python"], [], ["Python", "SQL"])
+    assert pytest.approx(res_pref["score"], 0.001) == 0.50
+    assert res_pref["has_job_skills"] is True
+
+    # Neither
+    res_empty = calculate_skill_match_score(["Python"], [], [])
+    assert res_empty["score"] == 0.0
+    assert res_empty["has_job_skills"] is False
+
+
+def test_weight_validation_and_normalization():
+    """Test weight validation, normalization, and invalid fallback handling."""
+    from matcher import validate_and_normalize_weights
+    import math
+
+    # Standard valid
+    w_t, w_s, warn = validate_and_normalize_weights(0.65, 0.35)
+    assert pytest.approx(w_t, 0.001) == 0.65
+    assert pytest.approx(w_s, 0.001) == 0.35
+    assert warn is None
+
+    # Valid un-normalized (1.0, 3.0 -> 0.25, 0.75)
+    w_t, w_s, warn = validate_and_normalize_weights(1.0, 3.0)
+    assert pytest.approx(w_t, 0.001) == 0.25
+    assert pytest.approx(w_s, 0.001) == 0.75
+
+    # Negative weights -> fallback to defaults
+    w_t, w_s, warn = validate_and_normalize_weights(-0.5, 0.5)
+    assert warn is not None
+    assert pytest.approx(w_t + w_s, 0.001) == 1.0
+
+    # NaN / Inf weights -> fallback to defaults
+    w_t, w_s, warn = validate_and_normalize_weights(float("nan"), 0.5)
+    assert warn is not None
+    assert math.isfinite(w_t) and math.isfinite(w_s)
+
+    # Both zero -> fallback to defaults
+    w_t, w_s, warn = validate_and_normalize_weights(0.0, 0.0)
+    assert warn is not None
+    assert pytest.approx(w_t + w_s, 0.001) == 1.0
+
+
+def test_failed_extractions_score_zero_and_rank_last():
+    """Ensure unparseable resumes always receive 0 scores and are placed at the bottom."""
+    jd = "Senior Python engineer with AWS"
+    resumes = [
+        {"filename": "failed1.pdf", "success": False, "error": "Corrupt file"},
+        {"filename": "good.txt", "success": True, "raw_text": "Python engineer with AWS experience"},
+        {"filename": "failed2.pdf", "success": False, "error": "Password protected"}
+    ]
+    ranked = rank_resumes(jd, resumes)
+    assert len(ranked) == 3
+    assert ranked[0]["filename"] == "good.txt"
+    assert ranked[0]["overall_score"] > 0.0
+    assert ranked[1]["success"] is False
+    assert ranked[1]["overall_score"] == 0.0
+    assert ranked[2]["success"] is False
+    assert ranked[2]["overall_score"] == 0.0
+
+
+def test_end_to_end_extraction_failures_and_empty_resumes():
+    """
+    Test end-to-end parsing failures (corrupt PDF, empty file, unsupported extension)
+    through parse_resume and verify rank_resumes ranks them at the bottom with 0.0 scores.
+    """
+    from resume_parser import parse_resume
+
+    # 1. Corrupt PDF bytes
+    corrupt_pdf = parse_resume(b"%PDF-1.4 corrupt content", "bad.pdf")
+    assert corrupt_pdf["success"] is False
+    assert "error" in corrupt_pdf
+
+    # 2. Empty text file
+    empty_txt = parse_resume(b"", "empty.txt")
+    assert empty_txt["success"] is False
+
+    # 3. Unsupported extension
+    unsupported = parse_resume(b"\xff\xd8\xff", "photo.jpg")
+    assert unsupported["success"] is False
+
+    # 4. Valid resume
+    valid_bytes = b"Jane Doe\njane@example.com\n555-0100\nSenior Python engineer with Docker, AWS, and PostgreSQL with extensive background."
+    valid_resume = parse_resume(valid_bytes, "valid.txt")
+    assert valid_resume["success"] is True
+
+    # Rank all together
+    jd = "Python Engineer with Docker and AWS"
+    ranked = rank_resumes(jd, [corrupt_pdf, empty_txt, unsupported, valid_resume])
+
+    assert len(ranked) == 4
+    # The valid resume MUST be rank 1 with score > 0
+    assert ranked[0]["filename"] == "valid.txt"
+    assert ranked[0]["success"] is True
+    assert ranked[0]["overall_score"] > 0.0
+
+    # All three failures must be below the valid resume with 0.0 score
+    for failed_cand in ranked[1:]:
+        assert failed_cand["success"] is False
+        assert failed_cand["overall_score"] == 0.0
+        assert failed_cand["text_similarity_score"] == 0.0
+        assert failed_cand["skill_match_score"] == 0.0

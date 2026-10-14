@@ -14,27 +14,31 @@ def sanitize_csv_cell(value: Any) -> str:
     """
     Sanitize cell value to prevent CSV / Spreadsheet formula injection.
     Prefixes values starting with '=', '+', '-', '@', '\t', or '\r' with an apostrophe.
+    Also handles whitespace padding around dangerous leading characters.
     """
     if value is None:
         return ""
     val_str = str(value)
     if not val_str:
         return ""
-    # Check for dangerous spreadsheet leading characters (before and after whitespace strip)
-    if val_str[0] in ("=", "+", "-", "@", "\t", "\r") or (val_str.strip() and val_str.strip()[0] in ("=", "+", "-", "@")):
+    # Check for dangerous spreadsheet leading characters
+    stripped = val_str.strip()
+    if val_str[0] in ("=", "+", "-", "@", "\t", "\r", "\n") or (stripped and stripped[0] in ("=", "+", "-", "@")):
         return "'" + val_str
-    return val_str.strip()
+    return val_str
 
 
 def generate_candidates_csv(ranked_candidates: List[Dict[str, Any]]) -> str:
     """
     Generate CSV string from ranked candidate records.
     Returns UTF-8 string with standard headers and sanitized values.
+    Appends detailed required vs preferred skills and evidence coverage
+    while maintaining full backward compatibility with index-based checks.
     """
     output = io.StringIO()
     writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
 
-    # Header definition
+    # Header definition (preserving first 15 columns for backwards compatibility)
     headers = [
         "Rank",
         "Candidate ID",
@@ -50,7 +54,12 @@ def generate_candidates_csv(ranked_candidates: List[Dict[str, Any]]) -> str:
         "Education Evidence",
         "Experience Evidence",
         "Extraction Status",
-        "Error Details"
+        "Error Details",
+        "Matched Required Skills",
+        "Missing Required Skills",
+        "Matched Preferred Skills",
+        "Missing Preferred Skills",
+        "Evidence Coverage (%)"
     ]
     writer.writerow(headers)
 
@@ -70,7 +79,12 @@ def generate_candidates_csv(ranked_candidates: List[Dict[str, Any]]) -> str:
             sanitize_csv_cell(" | ".join(cand.get("education_evidence", []))),
             sanitize_csv_cell(" | ".join(cand.get("experience_evidence", []))),
             sanitize_csv_cell("Success" if cand.get("success") else "Failed"),
-            sanitize_csv_cell(cand.get("error", "") if not cand.get("success") else "")
+            sanitize_csv_cell(cand.get("error", "") if not cand.get("success") else ""),
+            sanitize_csv_cell("; ".join(cand.get("matched_required_skills", []))),
+            sanitize_csv_cell("; ".join(cand.get("missing_required_skills", []))),
+            sanitize_csv_cell("; ".join(cand.get("matched_preferred_skills", []))),
+            sanitize_csv_cell("; ".join(cand.get("missing_preferred_skills", []))),
+            sanitize_csv_cell(cand.get("evidence_coverage_score", 0.0))
         ]
         writer.writerow(row)
 

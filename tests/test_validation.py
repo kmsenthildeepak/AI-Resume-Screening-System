@@ -14,19 +14,33 @@ from exporter import sanitize_csv_cell, generate_candidates_csv
 
 
 def test_sanitize_csv_cell_formula_injection():
-    # Test spreadsheet formula characters
+    # Test standard spreadsheet formula triggers
     assert sanitize_csv_cell("=1+1") == "'=1+1"
     assert sanitize_csv_cell("+cmd|'/c calc'!A0") == "'+cmd|'/c calc'!A0"
     assert sanitize_csv_cell("-5+2") == "'-5+2"
     assert sanitize_csv_cell("@SUM(1,2)") == "'@SUM(1,2)"
     assert sanitize_csv_cell("\tTAB") == "'\tTAB"
+    assert sanitize_csv_cell("\rCARRIAGE") == "'\rCARRIAGE"
+    assert sanitize_csv_cell("\nNEWLINE") == "'\nNEWLINE"
+
+    # Test leading spaces, tabs, carriage returns, and newlines before formula characters
+    assert sanitize_csv_cell("   =1+1") == "'   =1+1"
+    assert sanitize_csv_cell("  +12345") == "'  +12345"
+    assert sanitize_csv_cell(" \t -cmd") == "' \t -cmd"
+    assert sanitize_csv_cell("\t\r  @alert") == "'\t\r  @alert"
+    assert sanitize_csv_cell("\n=SUM(A1:A10)") == "'\n=SUM(A1:A10)"
+    assert sanitize_csv_cell(" \r\n\t @calc") == "' \r\n\t @calc"
 
 
 def test_sanitize_csv_cell_normal_values():
     assert sanitize_csv_cell("Normal Text") == "Normal Text"
+    assert sanitize_csv_cell("  Leading and Trailing Spaces  ") == "  Leading and Trailing Spaces  "
+    assert sanitize_csv_cell("   Indented Paragraph") == "   Indented Paragraph"
+    assert sanitize_csv_cell("Trailing Space   ") == "Trailing Space   "
     assert sanitize_csv_cell("Python, Docker") == "Python, Docker"
     assert sanitize_csv_cell(95.5) == "95.5"
     assert sanitize_csv_cell(None) == ""
+    assert sanitize_csv_cell("") == ""
 
 
 def test_generate_candidates_csv_structure():
