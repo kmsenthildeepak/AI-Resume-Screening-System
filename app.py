@@ -9,6 +9,7 @@ Three primary functional routes:
 """
 
 import base64
+import hashlib
 import html
 import io
 import os
@@ -1046,6 +1047,95 @@ def format_file_size(size_bytes: int) -> str:
         return f"{size_bytes / (1024 * 1024):.1f} MB"
 
 
+def compute_document_id(filename: str, file_bytes: bytes) -> str:
+    """Compute stable, collision-resistant document identifier based on content SHA-256 and filename."""
+    h = hashlib.sha256(file_bytes).hexdigest()[:16]
+    clean_name = filename.strip()
+    return f"{clean_name}_{h}"
+
+
+def prune_screening_results(removed_doc_ids: set, removed_filenames: set = None, state=None):
+    """Prune removed candidates from active screening_results and re-index ranks.
+
+    Uses doc_id as primary identity. Falls back to candidate_id/filename only
+    for legacy candidates lacking a doc_id so removing one candidate with a duplicated
+    filename does not remove unrelated candidates.
+    """
+    if state is None:
+        try:
+            state = st.session_state
+        except Exception:
+            return
+    results = state.get("screening_results", [])
+    if not results:
+        return
+
+    removed_doc_ids_set = set(removed_doc_ids or [])
+    removed_filenames_set = set(removed_filenames or [])
+
+    filtered = []
+    for c in results:
+        c_doc_id = c.get("doc_id")
+        if c_doc_id:
+            # Primary identity match: prune strictly if doc_id or candidate_id is removed
+            if c_doc_id in removed_doc_ids_set or c.get("candidate_id") in removed_doc_ids_set:
+                continue
+            filtered.append(c)
+        else:
+            # Legacy fallback: prune if candidate_id or filename is in removed set
+            if c.get("candidate_id") in removed_doc_ids_set or c.get("filename") in removed_filenames_set:
+                continue
+            filtered.append(c)
+
+    for idx, c in enumerate(filtered, start=1):
+        c["rank"] = idx
+    state["screening_results"] = filtered
+
+    sel_id = state.get("selected_candidate_id")
+    if filtered:
+        if sel_id not in [c.get("candidate_id") for c in filtered]:
+            state["selected_candidate_id"] = filtered[0]["candidate_id"]
+    else:
+        state["selected_candidate_id"] = None
+
+    state["analyzed_filenames"] = [
+        c["filename"] for c in filtered
+    ]
+
+
+def remove_single_resume(target_doc_id: str):
+    """Remove a single resume document from the active cache and prune results."""
+    cache = st.session_state.get("uploaded_resumes_cache", [])
+    removed_items = [it for it in cache if it.get("doc_id") == target_doc_id]
+    st.session_state["uploaded_resumes_cache"] = [
+        it for it in cache if it.get("doc_id") != target_doc_id
+    ]
+    st.session_state.setdefault("removed_doc_ids", set()).add(target_doc_id)
+    if "uploader_known_doc_ids" in st.session_state and st.session_state["uploader_known_doc_ids"] is not None:
+        st.session_state["uploader_known_doc_ids"].discard(target_doc_id)
+    removed_names = {it["filename"] for it in removed_items}
+    prune_screening_results({target_doc_id}, removed_names)
+    old_key = f"resume_uploader_{st.session_state.get('uploader_key', 0)}"
+    st.session_state.pop(old_key, None)
+    st.session_state["uploader_key"] = st.session_state.get("uploader_key", 0) + 1
+    st.session_state["uploader_known_doc_ids"] = None
+    st.rerun()
+
+
+def clear_resume_queue():
+    """Clear all resumes from queue and reset all associated screening session state."""
+    old_key = f"resume_uploader_{st.session_state.get('uploader_key', 0)}"
+    st.session_state.pop(old_key, None)
+    st.session_state["uploaded_resumes_cache"] = []
+    st.session_state["uploader_known_doc_ids"] = None
+    st.session_state["removed_doc_ids"] = set()
+    st.session_state["screening_results"] = []
+    st.session_state["selected_candidate_id"] = None
+    st.session_state["analyzed_filenames"] = []
+    st.session_state["uploader_key"] = st.session_state.get("uploader_key", 0) + 1
+    st.rerun()
+
+
 def build_candidate_table_html(candidates: List[Dict[str, Any]]) -> str:
     """Construct a clean, pandas-independent HTML table with full XSS escaping for backwards-compatibility."""
     rows_html = []
@@ -1245,12 +1335,16 @@ def render_page_candidates():
                 st.session_state["jd_textarea"] = SAMPLE_JOB_DESCRIPTION
 
             def clear_jd():
+                old_key = f"resume_uploader_{st.session_state.get('uploader_key', 0)}"
+                st.session_state.pop(old_key, None)
                 st.session_state["persistent_jd_text"] = ""
                 st.session_state["jd_textarea"] = ""
                 st.session_state["analyzed_jd"] = ""
                 st.session_state["screening_results"] = []
                 st.session_state["selected_candidate_id"] = None
                 st.session_state["uploaded_resumes_cache"] = []
+                st.session_state["uploader_known_doc_ids"] = None
+                st.session_state["removed_doc_ids"] = set()
                 st.session_state["analyzed_filenames"] = []
                 st.session_state["uploader_key"] = st.session_state.get("uploader_key", 0) + 1
 
@@ -1308,17 +1402,78 @@ def render_page_candidates():
             # Ingest newly uploaded files into session cache (single source of truth)
             if "uploaded_resumes_cache" not in st.session_state:
                 st.session_state["uploaded_resumes_cache"] = []
+            if "removed_doc_ids" not in st.session_state:
+                st.session_state["removed_doc_ids"] = set()
 
+            # Ensure all cached items have stable doc_id (backwards compatibility)
+            for item in st.session_state["uploaded_resumes_cache"]:
+                if "doc_id" not in item:
+                    item["doc_id"] = compute_document_id(item["filename"], item["bytes"])
+
+            # Inspect current files from st.file_uploader widget
+            curr_uploader_items = []
+            curr_uploader_doc_ids = set()
             if uploaded_files:
-                existing_filenames = {item["filename"] for item in st.session_state["uploaded_resumes_cache"]}
                 for f in uploaded_files:
-                    if f.name not in existing_filenames:
-                        st.session_state["uploaded_resumes_cache"].append({
-                            "filename": f.name,
-                            "bytes": f.getvalue(),
-                            "size": len(f.getvalue())
-                        })
-                        existing_filenames.add(f.name)
+                    f_bytes = f.getvalue()
+                    d_id = compute_document_id(f.name, f_bytes)
+                    curr_uploader_items.append({
+                        "filename": f.name,
+                        "bytes": f_bytes,
+                        "size": len(f_bytes),
+                        "doc_id": d_id
+                    })
+                    curr_uploader_doc_ids.add(d_id)
+
+            prev_uploader_doc_ids = st.session_state.get("uploader_known_doc_ids", None)
+            page_changed = st.session_state.get("_page_changed", False)
+            if page_changed:
+                st.session_state["_page_changed"] = False
+
+            if prev_uploader_doc_ids is None:
+                # First run or after queue reset: ingest any files in uploader not explicitly removed
+                for item in curr_uploader_items:
+                    if item["doc_id"] not in st.session_state["removed_doc_ids"]:
+                        if item["doc_id"] not in {it.get("doc_id") for it in st.session_state["uploaded_resumes_cache"]}:
+                            st.session_state["uploaded_resumes_cache"].append(item)
+                st.session_state["uploader_known_doc_ids"] = set(curr_uploader_doc_ids)
+            elif page_changed:
+                # Navigation guard: user just navigated to Candidates page.
+                # If uploader widget remounted empty, do not drop cached resumes.
+                if curr_uploader_doc_ids:
+                    new_ids = curr_uploader_doc_ids - prev_uploader_doc_ids
+                    if new_ids:
+                        existing_ids = {it.get("doc_id") for it in st.session_state["uploaded_resumes_cache"]}
+                        for item in curr_uploader_items:
+                            if item["doc_id"] in new_ids and item["doc_id"] not in existing_ids:
+                                st.session_state["uploaded_resumes_cache"].append(item)
+                    st.session_state["uploader_known_doc_ids"] = set(curr_uploader_doc_ids)
+            else:
+                # Detect files dropped/removed from st.file_uploader
+                dropped_ids = prev_uploader_doc_ids - curr_uploader_doc_ids
+                if dropped_ids:
+                    st.session_state["removed_doc_ids"].update(dropped_ids)
+                    dropped_names = {
+                        it["filename"] for it in st.session_state["uploaded_resumes_cache"]
+                        if it.get("doc_id") in dropped_ids
+                    }
+                    st.session_state["uploaded_resumes_cache"] = [
+                        it for it in st.session_state["uploaded_resumes_cache"]
+                        if it.get("doc_id") not in dropped_ids
+                    ]
+                    prune_screening_results(dropped_ids, dropped_names)
+
+                # Detect newly added files in st.file_uploader
+                new_ids = curr_uploader_doc_ids - prev_uploader_doc_ids
+                if new_ids:
+                    st.session_state["removed_doc_ids"].difference_update(new_ids)
+                    existing_ids = {it.get("doc_id") for it in st.session_state["uploaded_resumes_cache"]}
+                    for item in curr_uploader_items:
+                        if item["doc_id"] in new_ids and item["doc_id"] not in existing_ids:
+                            st.session_state["uploaded_resumes_cache"].append(item)
+                            existing_ids.add(item["doc_id"])
+
+                st.session_state["uploader_known_doc_ids"] = set(curr_uploader_doc_ids)
 
             cached_queue = st.session_state.get("uploaded_resumes_cache", [])
 
@@ -1352,10 +1507,25 @@ def render_page_candidates():
                     unsafe_allow_html=True
                 )
 
+                # Direct individual file removal controls
+                with st.expander("Remove Individual Resume from Queue", expanded=False):
+                    doc_options = {
+                        item["doc_id"]: f"{item['filename']} ({format_file_size(item['size'])})"
+                        for item in cached_queue
+                    }
+                    selected_doc_id = st.selectbox(
+                        "Select document to remove",
+                        options=list(doc_options.keys()),
+                        format_func=lambda d: doc_options.get(d, d),
+                        key="sel_remove_single_resume",
+                        label_visibility="collapsed"
+                    )
+                    if st.button("✕ Remove Selected Document", key="btn_remove_single_resume", use_container_width=True):
+                        if selected_doc_id:
+                            remove_single_resume(selected_doc_id)
+
                 if st.button("Clear Resume Queue", key="btn_clear_resume_queue", use_container_width=True):
-                    st.session_state["uploaded_resumes_cache"] = []
-                    st.session_state["uploader_key"] = st.session_state.get("uploader_key", 0) + 1
-                    st.rerun()
+                    clear_resume_queue()
             else:
                 st.markdown(
                     f"<div style='font-size: 0.75rem; color: var(--ats-text-muted); margin-bottom: 0.65rem; line-height: 1.4;'>"
@@ -1429,6 +1599,8 @@ def render_page_candidates():
                     file_bytes = item["bytes"]
                     filename = item["filename"]
                     parsed_res = parse_resume(file_bytes, filename)
+                    if "doc_id" in item:
+                        parsed_res["doc_id"] = item["doc_id"]
                     if not parsed_res.get("success"):
                         failed_parse_count += 1
                     parsed_resumes.append(parsed_res)
@@ -2053,6 +2225,10 @@ def main():
         st.session_state["uploaded_resumes_cache"] = []
     if "uploader_key" not in st.session_state:
         st.session_state["uploader_key"] = 0
+    if "uploader_known_doc_ids" not in st.session_state:
+        st.session_state["uploader_known_doc_ids"] = None
+    if "removed_doc_ids" not in st.session_state:
+        st.session_state["removed_doc_ids"] = set()
     if "analyzed_filenames" not in st.session_state:
         st.session_state["analyzed_filenames"] = []
     if "screening_results" not in st.session_state:
@@ -2063,6 +2239,9 @@ def main():
         st.session_state["selected_candidate_id"] = None
 
     selected_page = render_sidebar_nav()
+    page_changed = (st.session_state.get("_active_page") != selected_page)
+    st.session_state["_active_page"] = selected_page
+    st.session_state["_page_changed"] = page_changed
 
     if selected_page == "Candidates":
         render_page_candidates()

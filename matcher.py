@@ -428,11 +428,13 @@ def rank_resumes(
 
     for index, resume in enumerate(parsed_resumes):
         filename = resume.get("filename", "unknown")
+        doc_id = resume.get("doc_id")
         candidate_id = f"CAND_{index + 1:03d}_{filename}"
 
         if not resume.get("success"):
             results.append({
                 "candidate_id": candidate_id,
+                "doc_id": doc_id,
                 "filename": filename,
                 "name": None,
                 "emails": [],
@@ -493,6 +495,7 @@ def rank_resumes(
 
         results.append({
             "candidate_id": candidate_id,
+            "doc_id": doc_id,
             "filename": filename,
             "name": resume.get("name"),
             "emails": resume.get("emails", []),
