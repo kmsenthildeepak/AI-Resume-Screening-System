@@ -1704,7 +1704,7 @@ def render_page_overview():
         st.markdown("<div class='ats-card-header'><span>Candidate Match Comparison</span></div>", unsafe_allow_html=True)
 
         comp_rows = []
-        for c in candidates[:10]:
+        for c in candidates:
             name_val = format_field(c.get("name"), default="Not detected")
             status_val = '<span class="badge-ready">Parsed</span>' if c.get("success") and not c.get("warning") else ('<span class="badge-warning">Limited text</span>' if c.get("warning") else '<span class="badge-error">Failed</span>')
 

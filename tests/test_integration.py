@@ -881,5 +881,73 @@ def test_changing_pages_does_not_clear_queue_or_rescreen():
     assert len(at.session_state["uploaded_resumes_cache"]) == 1
 
 
+def test_screening_overview_displays_all_12_candidates():
+    """Verify that when 12 candidates are evaluated, all 12 appear in the comparison table."""
+    app_path = os.path.abspath("app.py")
+    at = AppTest.from_file(app_path, default_timeout=15)
+    at.run()
+
+    # Generate 12 distinct parsed resumes with varying skills and scores
+    parsed_12 = []
+    skills_pool = [
+        ["Java", "Spring Boot", "MySQL", "Docker", "REST API"],
+        ["Java", "Microservices", "PostgreSQL", "Git"],
+        ["Java", "Spring Boot", "Docker"],
+        ["Python", "Django", "PostgreSQL"],
+        ["Java", "Spring Boot"],
+        ["JavaScript", "React", "Node.js"],
+        ["Java", "MySQL"],
+        ["Docker", "Kubernetes", "AWS"],
+        ["Git", "Agile", "CI/CD"],
+        ["MySQL", "PostgreSQL"],
+        ["HTML", "CSS", "JavaScript"],
+        ["Project Management", "Agile", "Scrum"]
+    ]
+
+    for i in range(1, 13):
+        fname = f"candidate_{i:02d}.txt"
+        skills_text = " ".join(skills_pool[i - 1])
+        raw = f"Candidate {i}\nEmail: cand{i}@example.com\nSkills: {skills_text}\nExperience: Software engineer.\n"
+        p = parse_resume(raw.encode("utf-8"), fname)
+        parsed_12.append(p)
+
+    assert len(parsed_12) == 12
+
+    # Rank the 12 candidates against sample JD
+    ranked_12 = rank_resumes(SAMPLE_JOB_DESCRIPTION, parsed_12)
+    assert len(ranked_12) == 12
+
+    # Verify ranks are continuous #1 through #12
+    for idx, c in enumerate(ranked_12, start=1):
+        assert c["rank"] == idx
+
+    # Seed state and navigate to Screening Overview
+    at.session_state["persistent_jd_text"] = SAMPLE_JOB_DESCRIPTION
+    at.session_state["screening_results"] = ranked_12
+    at.session_state["analyzed_jd"] = SAMPLE_JOB_DESCRIPTION
+    at.session_state["analyzed_filenames"] = [c["filename"] for c in ranked_12]
+    at.session_state["uploaded_resumes_cache"] = [
+        {"filename": c["filename"], "bytes": b"mock", "size": 100} for c in ranked_12
+    ]
+    at.radio[0].set_value("Screening Overview").run()
+    assert not at.exception
+
+    # Locate markdown block rendering Candidate Match Comparison table
+    overview_markdowns = [m.value for m in at.markdown]
+    comparison_table_md = next(
+        (m for m in overview_markdowns if '<table class="data-table">' in m),
+        None
+    )
+    assert comparison_table_md is not None, "Candidate Match Comparison table not found in rendered markdown"
+
+    # Verify all 12 ranks (#1 to #12) and all 12 filenames appear in the table
+    for i in range(1, 13):
+        expected_rank_str = f"#{i}</td>"
+        expected_file_str = f"candidate_{i:02d}.txt"
+        assert expected_rank_str in comparison_table_md, f"Expected rank #{i} not found in comparison table HTML"
+        assert expected_file_str in comparison_table_md, f"Expected file {expected_file_str} not found in comparison table HTML"
+
+
+
 
 
