@@ -1,94 +1,155 @@
 # AI Resume Screening System
 
-An enterprise-ready, AI-assisted decision-support resume screening and candidate ranking application built in Python and React. The system leverages Natural Language Processing (TF-IDF vectorization and Cosine Similarity), boundary-aware skill taxonomy extraction, and a multi-tier contextual evidence engine to objectively score, explain, and rank candidate resumes against job descriptions.
+An AI-assisted decision-support resume screening and candidate ranking application. The system combines Natural Language Processing (TF-IDF vectorization and Cosine Similarity), boundary-aware skill taxonomy extraction, and a multi-tier contextual evidence engine to score, explain, and rank candidate resumes against job descriptions.
 
 ---
 
-## 📌 Problem Statement & Objective
+## 🌐 Live Deployments & Repository
 
-Recruitment teams receive hundreds of resumes for every posted position. Manually parsing and comparing resumes across disparate formats is repetitive, time-intensive, and prone to fatigue and unconscious bias.
-
-The **AI Resume Screening System** serves as an interactive **decision-support workspace** designed to:
-1. **Ingest & Parse Multi-Format Documents**: Extract structured text from **PDF, DOCX, and TXT** documents with robust error handling and file sanitization.
-2. **Deconstruct Job Descriptions**: Automatically isolate Job Titles, Required Competencies, and Preferred / Bonus Qualifications.
-3. **Pure-Python NLP & Similarity Engine**: Compute deterministic TF-IDF unigram/bigram vectors and cosine similarities without external C-extension binary dependencies (100% Windows Application Control compliant).
-4. **Contextual Skill Evidence Layer**: Distinguish between buzzword-stuffed skills lists vs. verified, metric-backed impact in professional work experience.
-5. **Deterministic, Bias-Free Ranking**: Rank candidates with strict score bounding \([0.0\%, 100.0\%]\) and deterministic multi-key tie-breaking, ensuring demographic identifiers (names, emails, phones, filenames) never influence candidate scores.
-6. **Accessible ATS Recruiter Dashboard**: Multi-page Streamlit workspace featuring responsive candidate review tabs, accessible high-contrast raw document viewers, and sanitized CSV exports.
-7. **Aceternity UI Hero Parallax Landing Page**: Modern React + TypeScript + Tailwind CSS marketing and landing experience.
-
-> **Responsible AI Notice:** This system is an assistive screening tool. It does **not** make autonomous hiring decisions, does **not** reject candidates automatically, and explicitly excludes demographic attributes (gender, age, race, religion, etc.) from scoring algorithms.
-
----
-
-## 🛠️ Technology Stack
-
-| Layer | Technology | Rationale & Architectural Implementation |
+| Resource | URL | Description |
 |---|---|---|
-| **Streamlit Workspace** | Python 3.11.9, Streamlit 1.32.2 | 3-Page ATS Recruiter Workspace (Screening Queue, Overview Metrics, Candidate Review) |
-| **Landing Page** | React 18, Vite, TypeScript, Tailwind CSS, Framer Motion | Modern Aceternity UI Hero Parallax responsive landing experience in `frontend/` |
-| **NLP & Scoring Engine** | Pure-Python Vectorizer & Cosine Math | Custom TF-IDF engine with pure Python math (`math.sqrt`), with optional Scikit-Learn fallback |
-| **Document Parsers** | `pypdf`, `python-docx`, Python Standard Library | Resilient binary and text extractors with malformed document detection |
-| **Evidence Extraction** | Regex & Section Segmenter | Multi-tier evidence classifier with quantified metric detection (`%`, `$`, scale numbers) |
-| **Export Subsystem** | Standard `csv` | Formula-injection mitigated (`=`, `+`, `-`, `@`, `\t`, `\r`), UTF-8 encoded report generation |
-| **Testing & QA** | `pytest`, Playwright | 79 automated pytest tests across 6 modules + headless browser UI verification |
+| **Live Screening Application (Streamlit)** | [https://ai-resume-screening-systems.streamlit.app/?page=Candidates](https://ai-resume-screening-systems.streamlit.app/?page=Candidates) | 3-Page ATS Recruiter Workspace (Screening Queue, Overview, Candidate Review) |
+| **Live Product Landing Page (Vercel)** | [https://ai-resume-screening-system-nu.vercel.app/](https://ai-resume-screening-system-nu.vercel.app/) | React + TypeScript + Vite showcase and feature overview |
+| **Source Code Repository** | [https://github.com/kmsenthildeepak/AI-Resume-Screening-System](https://github.com/kmsenthildeepak/AI-Resume-Screening-System) | Official GitHub repository |
 
 ---
 
-## 📐 Scoring Formula & Mathematical Model
+## 📌 Problem Statement & Objectives
 
-The system calculates a bounded composite match score between **0.0% and 100.0%** for each successfully parsed resume.
+### The Problem
+Recruiting teams frequently receive large volumes of resumes for each open requisition. Manually reading, parsing, and comparing resumes across inconsistent document formats (PDF, DOCX, TXT) is time-consuming, prone to reviewer fatigue, and susceptible to cognitive bias.
+
+### Project Objectives
+1. **Multi-Format Ingestion**: Extract structured text from **PDF, DOCX, and TXT** documents with robust error handling and malformed-file resilience.
+2. **Job Description Parsing**: Identify Job Titles, Required Competencies, and Preferred / Bonus Qualifications from unstructured job postings.
+3. **Pure-Python NLP & Similarity Engine**: Compute deterministic TF-IDF unigram/bigram vectors and cosine similarities without compiled native binary extensions, ensuring portability across restricted Windows environments and cloud runtimes.
+4. **Contextual Skill Evidence Layer**: Detect whether matched skills appear in professional work experience with measurable metrics, project summaries, or merely unverified skills inventories.
+5. **Deterministic Scoring & Identifier Removal**: Rank candidates with bounded scores \([0.0\%, 100.0\%]\) and multi-key tie-breaking, ensuring demographic identifiers (names, emails, phones, filenames) do not alter candidate relevance scores.
+6. **Decision-Support Workspace**: Multi-page recruiter interface featuring active screening queues, individual resume removal controls, overview analytics, deep-dive candidate dossiers, accessible raw text inspection, and sanitized CSV exports.
+
+> **Responsible AI Notice:** This system is an assistive decision-support tool. It does **not** make autonomous hiring decisions, does **not** automatically reject applicants, and strips non-job-related personal identifiers before text vectorization. A human recruiter must review all candidates and contextual evidence.
+
+---
+
+## 🔄 User Workflow
+
+```mermaid
+flowchart LR
+    A["1. Input Job Description"] --> B["2. Upload Resumes"]
+    B --> C["3. Manage Active Queue"]
+    C --> D["4. Analyze and Rank"]
+    D --> E["5. Candidates Leaderboard"]
+    D --> F["6. Screening Overview"]
+    D --> G["7. Candidate Review"]
+    E --> H["8. Export Sanitized CSV"]
+```
+
+1. **Job Description Setup**: Paste job requirements or click **Load Sample Job Description** (Java Full Stack Developer template). Minimum requirement: 30 characters.
+2. **Resume Upload & Queue Management**: Upload candidate resumes (PDF, DOCX, TXT, up to 10 MB per file). View active documents with formatted file sizes. Remove individual resumes or clear the queue at any time.
+3. **Screening & Vectorization**: Click **Analyze & Rank Candidates** (or evaluate prebuilt demo sample candidates). The engine parses documents, strips PII from TF-IDF inputs, extracts skills, computes similarities, and establishes rankings.
+4. **Candidate Leaderboard**: Inspect ranked candidates with overall score, TF-IDF textual similarity, skill match percentage, matched skills, and missing requirements.
+5. **Screening Overview**: Review aggregate metrics including total evaluated, parsing success rate, average match score, score tier distribution, and required competency coverage.
+6. **Candidate Review Workspace**: Select any candidate to inspect their profile dossier, contact information, education/experience mentions, contextual evidence quotes, and full raw extracted text in a high-contrast viewer.
+7. **Secure CSV Export**: Export the screening leaderboard as a sanitized CSV report protected against spreadsheet formula injection.
+
+---
+
+## 🏗️ System Architecture
+
+The application is structured into two complementary layers: a React landing page and a Python Streamlit ATS screening workspace.
+
+```
+AI-Resume-Screening-System/
+├── frontend/ (React 19 + TypeScript + Vite)
+│   └── Hosted on Vercel: Landing page and feature showcase
+│
+└── Python Screening Core (Streamlit + Pure-Python NLP)
+    ├── app.py                   # 3-Page ATS Recruiter Workspace
+    ├── resume_parser.py         # Multi-format document extraction (PDF, DOCX, TXT)
+    ├── requirement_extractor.py # Skill taxonomy matching & evidence classification
+    ├── matcher.py               # Deterministic TF-IDF vectorizer & cosine scoring
+    ├── exporter.py              # Sanitized CSV report generation
+    └── config.py                # Weights, file thresholds, and 70+ skill catalog
+```
+
+### Component Architecture
+
+| Component | Technology | Role & Functionality |
+|---|---|---|
+| **Landing Application** | React 19, TypeScript, Vite, Tailwind CSS, Motion | Feature showcase landing page hosted on Vercel |
+| **Screening Application** | Python 3.11, Streamlit 1.35+ | 3-Page ATS interface (Candidates, Screening Overview, Candidate Review) |
+| **Document Parsers** | `pypdf`, `python-docx`, Python Standard Library | Resilient binary extractors with malformed document detection |
+| **Document Identity** | `hashlib` (SHA-256) | Stable content hashing (`{filename}_{hash[:16]}`) distinguishing same-named files |
+| **NLP & Scoring** | Custom Pure-Python Vectorizer, Cosine Math | Unigram/bigram tokenization, TF-IDF calculation, cosine similarity |
+| **Taxonomy Extractor** | Boundary-Aware Regex Pattern Matcher | Case-insensitive skill matching with strict boundaries (`C++`, `C#`, `R`, `Go`) |
+| **Evidence Engine** | Section & Metric Regex Classifier | Multi-tier evidence categorization (`Impact`, `Experience`, `Project`, `Skills List`) |
+| **Export Subsystem** | Standard `csv` | Formula-injection mitigated (`=`, `+`, `-`, `@`, `\t`, `\r`), UTF-8 encoded |
+
+---
+
+## 📐 Scoring Methodology & Mathematical Model
+
+The scoring engine calculates a bounded composite match score between **0.0% and 100.0%** for each successfully parsed resume.
 
 ### 1. Composite Score
 
 $$\text{Overall Score} = \left(W_{\text{text}} \times S_{\text{text}}\right) + \left(W_{\text{skill}} \times S_{\text{skill}}\right)$$
 
-- **Default Weights:**
+- **Default Configuration:**
   - $W_{\text{text}} = 0.65$ (65% weight on TF-IDF textual similarity)
   - $W_{\text{skill}} = 0.35$ (35% weight on explicit skill taxonomy overlap)
-  - Weights are validated and normalized: $W_{\text{text}} + W_{\text{skill}} = 1.0$. If invalid, NaN, infinite, negative, or all-zero weights are supplied, safe defaults are enforced.
+- **Weight Normalization & Safety:** Weights are normalized such that $W_{\text{text}} + W_{\text{skill}} = 1.0$. Invalid weights (negative, NaN, infinite, or zero sum) automatically fall back to safe defaults ($0.65 / 0.35$).
 
 ### 2. Skill Overlap Calculation ($S_{\text{skill}}$)
 
-Job descriptions are parsed into **Required Skills** ($R$) and **Preferred Skills** ($P$). Candidate resumes are evaluated against both sets:
+Job descriptions are parsed into **Required Skills** ($R$) and **Preferred Skills** ($P$):
 
 - **When both Required and Preferred skills exist:**
   $$S_{\text{skill}} = W_{\text{req}} \times \left(\frac{|\text{Matched}_R|}{|R|}\right) + W_{\text{pref}} \times \left(\frac{|\text{Matched}_P|}{|P|}\right)$$
-  - Default: $W_{\text{req}} = 0.80$ (80%) and $W_{\text{pref}} = 0.20$ (20%).
+  *(Default: $W_{\text{req}} = 0.80$ and $W_{\text{pref}} = 0.20$)*
 - **When only Required skills exist:**
   $$S_{\text{skill}} = \frac{|\text{Matched}_R|}{|R|}$$
 - **When only Preferred skills exist:**
   $$S_{\text{skill}} = \frac{|\text{Matched}_P|}{|P|}$$
   *(Candidates never receive unearned credit for an empty required skills section).*
 - **When no cataloged skills exist in the Job Description:**
-  The system falls back gracefully to 100% TF-IDF textual similarity ($S_{\text{skill}} = S_{\text{text}}$).
+  The system falls back to 100% TF-IDF textual similarity ($S_{\text{skill}} = S_{\text{text}}$).
 
 ### 3. Deterministic Multi-Key Tie Breaking
 
 Candidates with identical overall scores are deterministically ranked using a stable tuple key:
 1. `overall_score` (descending)
 2. `matched_required_count` (descending)
-3. `text_similarity` (descending)
-4. `candidate_name` (case-insensitive alphabetical ascending)
-5. `file_id` (lexicographical ascending)
+3. `text_similarity_score` (descending)
+4. `candidate_name` (case-insensitive ascending)
+5. `candidate_id` (lexicographical ascending)
 
-Failed or unparseable resumes always receive an overall score of `0.0%` and are positioned at the bottom of the leaderboard with clear error diagnostics.
+Failed or malformed resumes receive an overall score of `0.0%` and are positioned at the bottom of the leaderboard with clear error diagnostics.
+
+> **Important Interpretation Notice:** The overall match score is an indicator of **lexical and syntactic alignment** with the written job description. It does **not** represent a statistical probability of candidate job success, competence, or hiring probability. Human review is mandatory.
 
 ---
 
-## 🔍 Explainable Skill Evidence Engine
+## 🔍 Contextual Evidence Engine & Fairness Limitations
 
-To provide recruiters with transparent verification and expose keyword stuffing, the system parses resumes into structural sections (`work_experience`, `projects`, `skills`, `education`) and categorizes each matched skill into an **Evidence Tier**:
+### Evidence Tiers (Explanatory Layer)
 
-| Tier | Badge | Definition & Criteria |
+To help recruiters detect keyword stuffing and audit claims, matched skills are classified into **Evidence Tiers**:
+
+| Tier | Badge | Criteria & Definition |
 |---|---|---|
 | **Impact** | 🏆 `Impact` | Skill appears in work experience alongside quantifiable metrics (e.g. `25%`, `$1.2M`, `10x`, `500k`) or strong impact verbs (`optimized`, `scaled`, `reduced`, `delivered`). |
-| **Work Experience** | ⚡ `Experience` | Skill demonstrated in professional job history and responsibilities without specific numerical metrics. |
+| **Work Experience** | ⚡ `Experience` | Skill appears within professional work experience history without specific quantifiable numbers. |
 | **Project** | 🛠️ `Project` | Skill demonstrated in portfolio projects, capstones, or open-source repositories. |
-| **Skills List** | 📋 `Skills List` | Skill found solely in a summary skills inventory or comma-separated list. Flagged with a warning: *"Listed in skills summary only; no contextual work experience verified."* |
-| **Mention Only** | ⚠️ `Mention` | Skill occurs casually in general resume body text without identifiable section context. |
+| **Skills List** | 📋 `Skills List` | Skill occurs exclusively in a summary skills inventory or comma-separated list. Flagged with a warning. |
+| **Mention Only** | ⚠️ `Mention` | Skill appears casually in general body text without identifiable section context. |
 
-> **Audit & Explanation Notice:** Evidence tiers, snippets, and Evidence Coverage percentages are strictly **explanatory and audit-focused**. They provide recruiters with qualitative verification and verbatim excerpts to audit claims, but do **not** mathematically modify the composite score or ranking order.
+> **Audit Context Notice:** Evidence tiers, snippet quotes, and Evidence Coverage percentages are strictly **explanatory and qualitative**. They provide recruiters with verifiable context to audit resume claims, but do **not** modify the mathematical ranking score.
+
+### Fairness & Anti-Bias Implementation
+1. **PII Stripping for Matching**: Candidate names, email addresses, phone numbers, and filenames are stripped from text prior to TF-IDF vectorization. Regression tests verify that modifying non-job-related personal identifiers (name, email, phone, filename) does not alter the TF-IDF or skill match scores for otherwise identical resume text.
+2. **Protected Attribute Exclusion**: Demographic attributes (race, gender, age, nationality, marital status) are neither collected nor scored.
+3. **Fairness Limitations**: Lexical matching cannot verify the veracity of claimed qualifications or evaluate non-traditional career paths. TF-IDF vectorization favors resumes that mirror the specific phrasing of the job description. Recruiters should treat scores as initial organization aids rather than definitive evaluations.
 
 ---
 
@@ -96,33 +157,36 @@ To provide recruiters with transparent verification and expose keyword stuffing,
 
 ```text
 AI_Resume_Screening_System/
-├── app.py                      # Streamlit 3-page recruiter workspace
-├── resume_parser.py            # Multi-format document parser (PDF, DOCX, TXT)
-├── requirement_extractor.py    # JD parser, skill taxonomy, and evidence extractor
-├── matcher.py                  # Pure-Python TF-IDF vectorizer, cosine similarity & ranking
-├── exporter.py                 # Sanitized CSV generation with formula-injection guard
-├── config.py                   # System constants, weights, and skill taxonomy dictionary
-├── inspect_raw_resume.mjs      # Playwright browser inspection and visual QA script
-├── requirements.txt            # Tested Python dependencies
-├── pytest.ini                  # Pytest configuration
-├── frontend/                   # React + TypeScript + Tailwind landing application
-│   ├── src/                    # Hero Parallax component, UI cards, and styles
-│   ├── package.json            # Vite, React, Framer Motion, Tailwind dependencies
-│   └── vite.config.ts          # Vite build configuration
-├── sample_resumes/             # Synthetic test resumes for demonstration and testing
-│   ├── resume_01_strong_match.txt     # Senior Java / Backend engineer
-│   ├── resume_02_partial_match.docx   # Full Stack engineer with partial match
-│   ├── resume_03_unrelated.txt        # Marketing specialist (negative control)
-│   └── resume_04_python_dev.pdf       # Python / Data engineer PDF
-├── tests/                      # Automated test suite (79 tests)
-│   ├── test_evidence.py               # Skill evidence tiers, metrics, and warnings (5 tests)
-│   ├── test_fairness.py               # Anti-bias and demographic neutrality (2 tests)
-│   ├── test_integration.py            # Streamlit workflows, queue, and navigation (28 tests)
-│   ├── test_matcher.py                # Pure-Python TF-IDF, scoring math, tie-breaking (11 tests)
-│   ├── test_requirement_extractor.py  # JD sections, skill boundary matching (14 tests)
-│   ├── test_resume_parser.py          # PDF, DOCX, TXT parsers & entity extraction (15 tests)
-│   └── test_validation.py             # CSV sanitization, formula safety, Unicode (4 tests)
-└── docs/                       # Project reports, user guides, and architecture specs
+├── app.py                         # Streamlit 3-page recruiter workspace
+├── resume_parser.py               # Multi-format document parser (PDF, DOCX, TXT)
+├── requirement_extractor.py       # JD parser, skill taxonomy, and evidence extractor
+├── matcher.py                     # Pure-Python TF-IDF vectorizer, cosine similarity & ranking
+├── exporter.py                    # Sanitized CSV generation with formula-injection guard
+├── config.py                      # System constants, weights, and skill taxonomy catalog
+├── requirements.txt               # Tested Python dependencies
+├── pytest.ini                     # Pytest configuration
+├── assets/                        # Brand assets (logo, favicon)
+├── frontend/                      # React + TypeScript landing page application
+│   ├── src/                       # Components, styles, and hero showcase
+│   ├── package.json               # Frontend dependencies (React 19, Vite, Tailwind CSS)
+│   ├── vite.config.ts             # Vite build configuration
+│   └── tsconfig.json              # TypeScript compiler configuration
+├── sample_resumes/                # Synthetic test resumes for demonstration
+│   ├── resume_01_strong_match.txt
+│   ├── resume_02_partial_match.docx
+│   ├── resume_03_unrelated.txt
+│   ├── resume_04_python_dev.pdf
+│   └── data_scientist_test/       # 8 specialized test resumes for batch testing
+├── tests/                         # Automated test suite (95 tests)
+│   ├── test_evidence.py                  # Skill evidence tiers and warnings (5 tests)
+│   ├── test_fairness.py                  # PII stripping and demographic neutrality (5 tests)
+│   ├── test_integration.py               # Streamlit workflows, queue, and navigation (28 tests)
+│   ├── test_matcher.py                   # Pure-Python TF-IDF, scoring math, tie-breaking (12 tests)
+│   ├── test_queue_removal.py             # Queue synchronization, removal, and edge cases (12 tests)
+│   ├── test_requirement_extractor.py     # JD sections, skill boundary matching (14 tests)
+│   ├── test_resume_parser.py             # PDF, DOCX, TXT parsers & entity extraction (15 tests)
+│   └── test_validation.py                # CSV sanitization, formula safety, Unicode (4 tests)
+└── docs/                          # Architecture specifications and documentation
 ```
 
 ---
@@ -130,79 +194,120 @@ AI_Resume_Screening_System/
 ## 🚀 Setup & Execution Guide (Windows / PowerShell)
 
 ### Prerequisites
-- Windows 10 / 11
-- Python 3.11+
-- Node.js 18+ (for React landing page and Playwright verification)
+- **Operating System:** Windows 10 / 11 (or macOS / Linux)
+- **Python:** 3.11+
+- **Node.js:** 18+ (for running the React landing page)
+- **Git**
 
-### 1. Streamlit ATS Application
+---
+
+### Option 1: Running the Streamlit Screening Application
+
+Open Windows PowerShell and navigate to the project directory:
 
 ```powershell
-# 1. Navigate to project root
-cd E:\AI_Resume_Screening_System
+# 1. Clone repository (if not already cloned)
+git clone https://github.com/kmsenthildeepak/AI-Resume-Screening-System.git
+cd AI-Resume-Screening-System
 
-# 2. Activate virtual environment
+# 2. Create Python virtual environment
+python -m venv .venv
+
+# 3. Activate virtual environment
+# If script execution is blocked by PowerShell policy, use the bypass option:
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 
-# 3. Install dependencies
+# (Alternative: You can run python commands directly without activating):
+# .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+
+# 4. Install dependencies
 pip install -r requirements.txt
 
-# 4. Launch Streamlit Recruiter Workspace
+# 5. Launch the Streamlit ATS Recruiter Workspace
 streamlit run app.py
 ```
-Access the application at `http://localhost:8501`.
 
-### 2. React Landing Page (Hero Parallax)
+The application will be available at `http://localhost:8501`.
+
+---
+
+### Option 2: Running the React Landing Page
+
+In a separate PowerShell terminal:
 
 ```powershell
-# 1. Navigate to frontend directory
-cd E:\AI_Resume_Screening_System\frontend
+# 1. Navigate to the frontend directory
+cd AI-Resume-Screening-System\frontend
 
-# 2. Install dependencies
+# 2. Install Node dependencies
 npm install
 
-# 3. Start development server
+# 3. Start the Vite development server
 npm run dev
 
 # 4. Or build for production
 npm run build
 ```
-Access the landing page at `http://localhost:5173`.
+
+The React landing page will be available at `http://localhost:5173`.
 
 ---
 
 ## 🧪 Automated Testing & Verification
 
-Run the full automated pytest suite:
+The project includes an automated test suite comprising **95 verified tests** across 8 test modules.
+
+Run the test suite using the activated virtual environment or direct executable path:
 
 ```powershell
+# Using the active virtual environment
 pytest
+
+# Or direct invocation via virtual environment python
+.\.venv\Scripts\python.exe -m pytest
 ```
 
-**Results:**
-- **79 passed in ~5.9s**
-- `tests/test_evidence.py`: Validates evidence tiering, metric detection, and unverified skill warnings.
-- `tests/test_fairness.py`: Confirms candidate names, emails, and demographic attributes do not skew scores.
-- `tests/test_integration.py`: End-to-end tests for all 10 recruiter workflows, queue retention, and candidate display.
-- `tests/test_matcher.py`: Validates pure-Python TF-IDF, cosine similarity, weight normalization, and determinism.
-- `tests/test_requirement_extractor.py`: Tests boundary-aware skill matching (e.g., `Go`, `R`, `C++`, `C#`, `.NET`) and JD sectioning.
-- `tests/test_resume_parser.py`: Tests PDF, DOCX, TXT document extraction, malformed files, and size limits.
-- `tests/test_validation.py`: Tests CSV export sanitization, formula safety, and UTF-8 encoding.
+### Test Suite Breakdown
 
-### Visual & Browser Contrast Inspection
-
-To verify DOM rendering, candidate switching, and accessible contrast in both Light and Dark color schemes:
-
-```powershell
-node inspect_raw_resume.mjs
-```
-
-Screenshots are generated automatically at `raw_resume_light.png` and `raw_resume_dark.png`.
+| Test Module | Tests | Scope & Assertions |
+|---|:---:|---|
+| [`tests/test_evidence.py`](tests/test_evidence.py) | 5 | Evidence tiers (`Impact`, `Experience`, `Project`), quantifiable metric detection, unverified skills warnings |
+| [`tests/test_fairness.py`](tests/test_fairness.py) | 5 | PII stripping invariance, demographic neutrality, tie-breaking determinism, vocabulary preservation |
+| [`tests/test_integration.py`](tests/test_integration.py) | 28 | Recruiter workflows, multipage state synchronization, queue retention across navigation, 12-candidate rendering |
+| [`tests/test_matcher.py`](tests/test_matcher.py) | 12 | Pure-Python TF-IDF, cosine similarity, weight normalization, deterministic ranking, edge-case scores |
+| [`tests/test_queue_removal.py`](tests/test_queue_removal.py) | 12 | Uploader widget drops, UI removal expander, multi-rerun stability, same-filename collision handling, state reset |
+| [`tests/test_requirement_extractor.py`](tests/test_requirement_extractor.py) | 14 | Boundary-aware matching (`C++`, `C#`, `R`, `Go`, `.NET`), alias normalization, JD section segmentation |
+| [`tests/test_resume_parser.py`](tests/test_resume_parser.py) | 15 | PDF, DOCX, and TXT extraction, malformed document handling, size limit enforcement, contact info parsing |
+| [`tests/test_validation.py`](tests/test_validation.py) | 4 | CSV formula injection mitigation (`=`, `+`, `-`, `@`, `\t`, `\r`), non-dangerous whitespace preservation, UTF-8 safety |
+| **Total Verified** | **95** | **All passing** |
 
 ---
 
-## 🔒 Security, Privacy & Fairness Safeguards
+## 🔒 Security & Privacy Safeguards
 
-1. **Anti-Bias Guarantee**: Names, emails, phone numbers, and filenames are explicitly stripped from text before TF-IDF vectorization. Demographic characteristics (race, gender, nationality, age) are never collected or scored.
-2. **Formula Injection Sanitization**: All exported CSV cells starting with spreadsheet execution triggers (`=`, `+`, `-`, `@`, `\t`, `\r`) are automatically escaped with leading single quotes (`'`).
-3. **Local In-Memory Execution**: Resumes are parsed and scored entirely in local memory. No resume text, contact details, or candidate data are transmitted to external cloud APIs or third-party servers.
-4. **WDAC & Windows Integrity Compliance**: The scoring and ranking engine runs entirely on standard library Python data structures and pure-Python math, removing strict dependencies on native C-extension DLLs blocked by corporate Application Control policies.
+1. **Formula Injection Sanitization**: All exported CSV values beginning with spreadsheet calculation triggers (`=`, `+`, `-`, `@`, `\t`, `\r`) are escaped with a leading single quote (`'`), while non-dangerous ordinary whitespace is preserved.
+2. **Local In-Memory Processing**: Resumes are parsed, vectorized, and scored entirely in local memory. No candidate documents, contact details, or resume contents are transmitted to external third-party APIs.
+3. **Application Control (WDAC) Compliance**: The TF-IDF vectorizer and ranking engine run on standard library Python data structures and pure-Python math, avoiding hard dependencies on external C-extension binary DLLs that are blocked by corporate endpoint security policies.
+4. **Input Sanitization**: HTML entities in candidate names, filenames, and evidence quotes are escaped with `html.escape()` before rendering to prevent Cross-Site Scripting (XSS).
+
+---
+
+## ⚠️ Known Limitations & Future Improvements
+
+### Current Limitations
+- **Scanned Document OCR**: Image-only PDFs (scanned documents without embedded text layers) are not parsed by the standard text extractor.
+- **Fixed Skill Catalog**: Skill matching relies on an internal dictionary of 70+ industry skills and aliases. Uncataloged niche or proprietary tools rely solely on TF-IDF textual similarity.
+- **Lexical Matching**: TF-IDF and keyword matching evaluate lexical co-occurrence; they do not assess semantic depth, project quality, or candidate problem-solving ability.
+
+### Future Roadmap
+- [ ] Optical Character Recognition (OCR) integration via Tesseract for scanned PDF support.
+- [ ] Integration with open-source sentence transformers (e.g., `all-MiniLM-L6-v2`) for hybrid dense-lexical retrieval.
+- [ ] Integration with standardized competency ontologies (e.g., O*NET, ESCO).
+- [ ] Batch export to JSON / ATS webhook payloads for integration with enterprise platforms (Workday, Greenhouse).
+
+---
+
+## 📄 License
+
+This repository does not currently include a formal open-source license file. All rights are reserved by the repository owner unless otherwise noted.
