@@ -45,6 +45,7 @@ frontend/dist/
 uploads/
 uploaded_resumes/
 private_data/
+.sessions/
 
 # Local test artifacts and submission archive
 screenshots/
