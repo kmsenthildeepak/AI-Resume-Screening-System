@@ -56,15 +56,25 @@ flowchart LR
 
 ## 🏗️ System Architecture
 
-The application is structured into two complementary layers: a React landing page and a Python Streamlit ATS screening workspace.
+The application is structured into three integrated tiers: a high-performance React frontend, a dedicated FastAPI REST service, and a comprehensive Streamlit ATS screening workspace, all sharing a single pure-Python matching core.
 
 ```
 AI-Resume-Screening-System/
-├── frontend/ (React 19 + TypeScript + Vite)
-│   └── Hosted on Vercel: Landing page and feature showcase
+├── frontend/ (React 19 + TypeScript + Vite + Tailwind CSS + Motion)
+│   ├── src/components/screening-workspace.tsx # Live interactive screening workspace
+│   ├── src/components/hero-parallax-demo.tsx   # Aceternity UI parallax showcase
+│   ├── src/services/api.ts                    # Typed API client (VITE_API_BASE_URL)
+│   └── Hosted on Vercel: https://ai-resume-screening-system-nu.vercel.app/
 │
-└── Python Screening Core (Streamlit + Pure-Python NLP)
-    ├── app.py                   # 3-Page ATS Recruiter Workspace
+├── api.py (FastAPI REST Backend Service)
+│   ├── /health                                # Health check endpoint
+│   ├── /api/sample-jd                         # Sample job description template
+│   ├── POST /api/screen                       # Multipart resume ingestion & scoring
+│   ├── GET /api/screening/{id}                # Session retrieval (in-memory + .sessions/ disk cache)
+│   └── GET /api/screening/{id}/export         # Sanitized CSV report export
+│
+└── Python Screening Core (Pure-Python NLP + Streamlit ATS)
+    ├── app.py                   # 3-Page ATS Recruiter Workspace (Streamlit)
     ├── resume_parser.py         # Multi-format document extraction (PDF, DOCX, TXT)
     ├── requirement_extractor.py # Skill taxonomy matching & evidence classification
     ├── matcher.py               # Deterministic TF-IDF vectorizer & cosine scoring
@@ -76,8 +86,9 @@ AI-Resume-Screening-System/
 
 | Component | Technology | Role & Functionality |
 |---|---|---|
-| **Landing Application** | React 19, TypeScript, Vite, Tailwind CSS, Motion | Feature showcase landing page hosted on Vercel |
-| **Screening Application** | Python 3.11, Streamlit 1.35+ | 3-Page ATS interface (Candidates, Screening Overview, Candidate Review) |
+| **Interactive Frontend** | React 19, TypeScript, Vite, Tailwind CSS, Motion | Live interactive screening workspace + hero parallax hosted on Vercel |
+| **Backend REST API** | FastAPI, Uvicorn, Python-Multipart | Stateless/cached REST endpoints for parsing, matching, and CSV export |
+| **Streamlit ATS Workspace** | Python 3.11, Streamlit 1.35+ | 3-Page ATS interface (Candidates, Screening Overview, Candidate Review) |
 | **Document Parsers** | `pypdf`, `python-docx`, Python Standard Library | Resilient binary extractors with malformed document detection |
 | **Document Identity** | `hashlib` (SHA-256) | Stable content hashing (`{filename}_{hash[:16]}`) distinguishing same-named files |
 | **NLP & Scoring** | Custom Pure-Python Vectorizer, Cosine Math | Unigram/bigram tokenization, TF-IDF calculation, cosine similarity |
@@ -196,67 +207,72 @@ AI_Resume_Screening_System/
 ### Prerequisites
 - **Operating System:** Windows 10 / 11 (or macOS / Linux)
 - **Python:** 3.11+
-- **Node.js:** 18+ (for running the React landing page)
+- **Node.js:** 18+ (for running the React frontend)
 - **Git**
 
 ---
 
-### Option 1: Running the Streamlit Screening Application
+### Option 1: Running the FastAPI Backend & React Frontend (Recommended)
 
-Open Windows PowerShell and navigate to the project directory:
+#### Terminal 1 — Start the FastAPI Backend Service
 
 ```powershell
-# 1. Clone repository (if not already cloned)
-git clone https://github.com/kmsenthildeepak/AI-Resume-Screening-System.git
+# 1. Navigate to project root
 cd AI-Resume-Screening-System
 
-# 2. Create Python virtual environment
-python -m venv .venv
-
-# 3. Activate virtual environment
-# If script execution is blocked by PowerShell policy, use the bypass option:
+# 2. Activate virtual environment
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 
-# (Alternative: You can run python commands directly without activating):
-# .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-
-# 4. Install dependencies
+# 3. Install dependencies (including FastAPI & Uvicorn)
 pip install -r requirements.txt
 
-# 5. Launch the Streamlit ATS Recruiter Workspace
-streamlit run app.py
+# 4. Start the FastAPI backend on port 8000
+python -m uvicorn api:app --reload --port 8000
 ```
+Backend API will be live at `http://localhost:8000` (interactive Swagger docs at `http://localhost:8000/docs`).
 
-The application will be available at `http://localhost:8501`.
+#### Terminal 2 — Start the React Interactive Frontend
+
+```powershell
+# 1. Navigate to frontend directory
+cd AI-Resume-Screening-System\frontend
+
+# 2. Install dependencies
+npm install
+
+# 3. Start the Vite dev server
+npm run dev
+```
+Interactive React application will be live at `http://localhost:5173`.
 
 ---
 
-### Option 2: Running the React Landing Page
-
-In a separate PowerShell terminal:
+### Option 2: Running the Streamlit Multi-Page ATS Workspace
 
 ```powershell
-# 1. Navigate to the frontend directory
-cd AI-Resume-Screening-System\frontend
-
-# 2. Install Node dependencies
-npm install
-
-# 3. Start the Vite development server
-npm run dev
-
-# 4. Or build for production
-npm run build
+# Navigate to project root and launch Streamlit
+cd AI-Resume-Screening-System
+.\.venv\Scripts\Activate.ps1
+streamlit run app.py
 ```
+The Streamlit application will be available at `http://localhost:8501`.
 
-The React landing page will be available at `http://localhost:5173`.
+---
+
+## ☁️ Deployment Architecture & Configuration
+
+| Service | Recommended Host | Configuration Variables |
+|---|---|---|
+| **React Frontend** | [Vercel](https://vercel.com/) | `VITE_API_BASE_URL` (points to deployed FastAPI URL)<br>`VITE_STREAMLIT_URL` (points to Streamlit app) |
+| **FastAPI Backend** | [Render](https://render.com/) / [Railway](https://railway.app/) / Cloud Run | `CORS_ORIGINS` (comma-separated allowed origins, e.g. `https://ai-resume-screening-system-nu.vercel.app`) |
+| **Streamlit Workspace** | [Streamlit Community Cloud](https://streamlit.io/cloud) | Built-in GitHub deployment |
 
 ---
 
 ## 🧪 Automated Testing & Verification
 
-The project includes an automated test suite comprising **95 verified tests** across 8 test modules.
+The project includes an automated test suite comprising **108 verified tests** across 9 test modules.
 
 Run the test suite using the activated virtual environment or direct executable path:
 
@@ -272,6 +288,7 @@ pytest
 
 | Test Module | Tests | Scope & Assertions |
 |---|:---:|---|
+| [`tests/test_api.py`](tests/test_api.py) | 13 | Health check, validation errors, multi-candidate ranking, session caching, 404 handling, CSV export, corrupted document resilience, TTL eviction, 4 sample resumes regression, empty files validation, cross-process disk fallback, path traversal prevention, expired session handling |
 | [`tests/test_evidence.py`](tests/test_evidence.py) | 5 | Evidence tiers (`Impact`, `Experience`, `Project`), quantifiable metric detection, unverified skills warnings |
 | [`tests/test_fairness.py`](tests/test_fairness.py) | 5 | PII stripping invariance, demographic neutrality, tie-breaking determinism, vocabulary preservation |
 | [`tests/test_integration.py`](tests/test_integration.py) | 28 | Recruiter workflows, multipage state synchronization, queue retention across navigation, 12-candidate rendering |
@@ -280,7 +297,7 @@ pytest
 | [`tests/test_requirement_extractor.py`](tests/test_requirement_extractor.py) | 14 | Boundary-aware matching (`C++`, `C#`, `R`, `Go`, `.NET`), alias normalization, JD section segmentation |
 | [`tests/test_resume_parser.py`](tests/test_resume_parser.py) | 15 | PDF, DOCX, and TXT extraction, malformed document handling, size limit enforcement, contact info parsing |
 | [`tests/test_validation.py`](tests/test_validation.py) | 4 | CSV formula injection mitigation (`=`, `+`, `-`, `@`, `\t`, `\r`), non-dangerous whitespace preservation, UTF-8 safety |
-| **Total Verified** | **95** | **All passing** |
+| **Total Verified** | **108** | **All passing** |
 
 ---
 

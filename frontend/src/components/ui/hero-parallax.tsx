@@ -20,12 +20,14 @@ export const HeroParallax = ({
   products,
   headerTitle = "AI-Powered Resume Screening System",
   headerSubtitle = "Screen resumes, match skills against job descriptions, and compare candidates using transparent, evidence-based ranking indicators.",
-  dashboardUrl = "http://localhost:8501",
+  dashboardUrl = "http://localhost:8501/?page=Candidates",
+  screeningUrl = "#screening",
 }: {
   products: ProductCardItem[];
   headerTitle?: string;
   headerSubtitle?: string;
   dashboardUrl?: string;
+  screeningUrl?: string;
 }) => {
   const firstRow = products.slice(0, 5);
   const secondRow = products.slice(5, 10);
@@ -74,6 +76,7 @@ export const HeroParallax = ({
         title={headerTitle}
         subtitle={headerSubtitle}
         dashboardUrl={dashboardUrl}
+        screeningUrl={screeningUrl}
       />
       <motion.div
         style={{
@@ -123,10 +126,12 @@ export const Header = ({
   title,
   subtitle,
   dashboardUrl,
+  screeningUrl = "#screening",
 }: {
   title: string;
   subtitle: string;
   dashboardUrl: string;
+  screeningUrl?: string;
 }) => {
   return (
     <div className="relative left-0 top-0 mx-auto max-w-7xl px-4 py-16 md:py-28 w-full z-20">
@@ -143,11 +148,11 @@ export const Header = ({
 
       <div className="mt-8 flex flex-wrap items-center gap-4">
         <a
-          href={dashboardUrl}
+          href={screeningUrl}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all duration-200 hover:from-blue-500 hover:to-indigo-500 hover:shadow-blue-500/40 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
-          aria-label="Open Screening Dashboard (Streamlit ATS app on port 8501)"
+          aria-label="Start screening resumes now"
         >
-          <span>Open Screening Dashboard</span>
+          <span>Screen Resumes Now</span>
           <svg
             className="w-4 h-4 transition-transform group-hover:translate-x-1"
             fill="none"
@@ -155,12 +160,30 @@ export const Header = ({
             stroke="currentColor"
             strokeWidth={2}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </a>
+        <a
+          href={dashboardUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-700 bg-neutral-900/60 px-5 py-3.5 text-sm font-semibold text-neutral-300 backdrop-blur-sm transition-all duration-200 hover:bg-neutral-800 hover:text-white"
+          aria-label="Open Screening Dashboard (Streamlit ATS app on port 8501)"
+        >
+          <span>Open Screening Dashboard</span>
+          <svg
+            className="w-4 h-4 text-neutral-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
         </a>
         <a
           href="#features"
-          className="inline-flex items-center justify-center rounded-xl border border-neutral-700 bg-neutral-900/60 px-5 py-3.5 text-sm font-semibold text-neutral-300 backdrop-blur-sm transition-all duration-200 hover:bg-neutral-800 hover:text-white"
+          className="inline-flex items-center justify-center rounded-xl border border-transparent px-4 py-3.5 text-sm font-medium text-neutral-400 hover:text-white transition-colors"
         >
           Explore Features
         </a>

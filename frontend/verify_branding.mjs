@@ -31,7 +31,7 @@ async function verifyBranding() {
   const cta = reactPage.locator('a:has-text("Open Screening Dashboard")');
   const ctaHref = await cta.first().getAttribute("href");
   console.log(`React CTA link href: ${ctaHref}`);
-  if (ctaHref !== "http://localhost:8501") throw new Error("React CTA link mismatch");
+  if (ctaHref !== "http://localhost:8501/?page=Candidates") throw new Error("React CTA link mismatch");
 
   await reactPage.screenshot({ path: "E:/AI_Resume_Screening_System/react_branding_verified.png" });
   console.log("React screenshot captured: react_branding_verified.png");

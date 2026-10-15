@@ -25,7 +25,7 @@ async function verify() {
 
   const href = await cta.first().getAttribute("href");
   console.log(`CTA Link: ${href}`);
-  if (href !== "http://localhost:8501") throw new Error("CTA href mismatch");
+  if (href !== "http://localhost:8501/?page=Candidates") throw new Error("CTA href mismatch");
 
   const cards = page.locator('div[class*="group/product"]');
   const cardCount = await cards.count();

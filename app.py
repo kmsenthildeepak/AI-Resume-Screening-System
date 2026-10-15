@@ -12,9 +12,14 @@ import base64
 import hashlib
 import html
 import io
+import json
 import os
+import re
+import time
+import urllib.request
+import urllib.error
 import streamlit as st
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 from config import (
     DEFAULT_WEIGHT_TEXT_SIMILARITY,
@@ -1054,6 +1059,72 @@ def compute_document_id(filename: str, file_bytes: bytes) -> str:
     return f"{clean_name}_{h}"
 
 
+SESSION_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_\-]{8,64}$")
+
+
+def fetch_screening_session(session_id: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """Retrieve previously calculated screening session data by session_id.
+
+    Validates session_id against strict regex, attempts retrieval from:
+    1. In-process session store (if api.py is loaded in this runtime)
+    2. Shared filesystem store (.sessions/{session_id}.json) with 24-hour TTL check
+    3. FastAPI backend HTTP GET endpoint (/api/screening/{session_id}) with timeout
+
+    Returns (session_data, error_message).
+    """
+    if not session_id or not isinstance(session_id, str):
+        return None, "No session ID provided."
+
+    clean_id = session_id.strip()
+    if not SESSION_ID_PATTERN.match(clean_id):
+        return None, f"Invalid session ID format: '{clean_id}'. Must be 8 to 64 alphanumeric characters, hyphens, or underscores."
+
+    # 1. In-process cache check (if api.py is loaded in this runtime)
+    try:
+        from api import session_store
+        data = session_store.get(clean_id)
+        if data and isinstance(data, dict) and "results" in data:
+            return data, None
+    except Exception:
+        pass
+
+    # 2. Shared filesystem storage (.sessions/{session_id}.json)
+    sessions_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".sessions")
+    file_path = os.path.join(sessions_dir, f"{clean_id}.json")
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+            ts = loaded.get("timestamp", 0)
+            if time.time() - ts <= 86400:  # 24h TTL
+                return loaded, None
+            else:
+                return None, f"Screening session '{clean_id}' has expired (24-hour limit)."
+        except Exception:
+            pass
+
+    # 3. FastAPI backend HTTP GET endpoint
+    api_base_url = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
+    api_url = f"{api_base_url}/api/screening/{clean_id}"
+    try:
+        req = urllib.request.Request(api_url, headers={"User-Agent": "Streamlit-ATS"})
+        with urllib.request.urlopen(req, timeout=3.0) as resp:
+            if resp.status == 200:
+                payload = json.loads(resp.read().decode("utf-8"))
+                if isinstance(payload, dict) and "results" in payload:
+                    return payload, None
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None, f"Screening session '{clean_id}' was not found. It may have expired or the backend was restarted."
+        elif e.code == 400:
+            return None, f"Invalid screening session ID format: '{clean_id}'."
+        return None, f"Failed to retrieve screening session (HTTP {e.code})."
+    except Exception:
+        pass
+
+    return None, f"Screening session '{clean_id}' not found. Please verify the session ID or re-screen candidates."
+
+
 def prune_screening_results(removed_doc_ids: set, removed_filenames: set = None, state=None):
     """Prune removed candidates from active screening_results and re-index ranks.
 
@@ -1312,6 +1383,49 @@ def render_page_candidates():
         title="Candidates",
         subtitle="Manage, upload, and review candidate resume submissions"
     )
+
+    # Session Import Notice / Error Callouts
+    if st.session_state.get("_session_import_error"):
+        err = st.session_state["_session_import_error"]
+        err_col1, err_col2 = st.columns([5, 1])
+        with err_col1:
+            st.error(f"⚠️ **Session Transfer Notice:** {err}")
+        with err_col2:
+            if st.button("Dismiss", key="btn_dismiss_session_err", use_container_width=True):
+                st.session_state.pop("_session_import_error", None)
+                st.session_state.pop("_loaded_session_id", None)
+                if "session_id" in st.query_params:
+                    del st.query_params["session_id"]
+                if "screening_id" in st.query_params:
+                    del st.query_params["screening_id"]
+                st.rerun()
+
+    if st.session_state.get("session_import_meta"):
+        meta = st.session_state["session_import_meta"]
+        s_id = meta.get("session_id", "")
+        sess_id_short = (s_id[:12] + "...") if len(s_id) > 12 else s_id
+        meta_col1, meta_col2 = st.columns([4, 1])
+        with meta_col1:
+            st.info(
+                f"🔗 **Live Screening Session Imported** &bull; **Job:** {meta.get('job_title', 'Role')} &bull; "
+                f"**Candidates:** {meta.get('candidates_count', 0)} screened &bull; "
+                f"**Session ID:** `{sess_id_short}` &bull; *Transferred from React screening workspace*"
+            )
+        with meta_col2:
+            if st.button("Clear Imported Session", key="btn_clear_imported_session", use_container_width=True):
+                st.session_state.pop("session_import_meta", None)
+                st.session_state.pop("_loaded_session_id", None)
+                st.session_state["screening_results"] = []
+                st.session_state["analyzed_jd"] = ""
+                st.session_state["persistent_jd_text"] = ""
+                st.session_state["jd_textarea"] = ""
+                st.session_state["selected_candidate_id"] = None
+                st.session_state["analyzed_filenames"] = []
+                if "session_id" in st.query_params:
+                    del st.query_params["session_id"]
+                if "screening_id" in st.query_params:
+                    del st.query_params["screening_id"]
+                st.rerun()
 
     # 1. Job Description & Upload Accordion/Split
     col_jd, col_up = st.columns([1, 1], gap="medium")
@@ -2237,6 +2351,40 @@ def main():
         st.session_state["analyzed_jd"] = ""
     if "selected_candidate_id" not in st.session_state:
         st.session_state["selected_candidate_id"] = None
+
+    # Check for session_id or screening_id in query parameters to import live session
+    query_session_id = st.query_params.get("session_id") or st.query_params.get("screening_id")
+    if query_session_id:
+        current_loaded = st.session_state.get("_loaded_session_id")
+        if current_loaded != query_session_id:
+            data, err = fetch_screening_session(query_session_id)
+            st.session_state["_loaded_session_id"] = query_session_id
+            if data:
+                st.session_state["nav_page"] = "Candidates"
+                st.session_state["_session_import_error"] = None
+                results = data.get("results", [])
+                jd_text = data.get("job_description", "")
+                st.session_state["screening_results"] = results
+                st.session_state["analyzed_jd"] = jd_text
+                st.session_state["persistent_jd_text"] = jd_text
+                st.session_state["jd_textarea"] = jd_text
+                st.session_state["analyzed_filenames"] = [c.get("filename", "") for c in results]
+                if results:
+                    st.session_state["selected_candidate_id"] = results[0].get("candidate_id")
+                weights = data.get("weights", {})
+                if "text_similarity" in weights:
+                    st.session_state["config_text_weight"] = float(weights["text_similarity"])
+                if "skill_match" in weights:
+                    st.session_state["config_skill_weight"] = float(weights["skill_match"])
+                st.session_state["session_import_meta"] = {
+                    "session_id": query_session_id,
+                    "job_title": data.get("job_title", "Imported Role"),
+                    "candidates_count": len(results),
+                    "summary": data.get("summary", {}),
+                    "timestamp": data.get("timestamp", time.time()),
+                }
+            else:
+                st.session_state["_session_import_error"] = err
 
     selected_page = render_sidebar_nav()
     page_changed = (st.session_state.get("_active_page") != selected_page)
