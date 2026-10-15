@@ -247,6 +247,9 @@ export function getStreamlitCandidatesUrl(sessionId?: string): string {
     url.searchParams.set("page", "Candidates");
     if (sessionId && sessionId.trim() !== "") {
       url.searchParams.set("session_id", sessionId.trim());
+      if (API_BASE_URL && API_BASE_URL.trim() !== "" && !API_BASE_URL.includes("localhost:8000")) {
+        url.searchParams.set("api_url", API_BASE_URL.trim());
+      }
     }
     return url.toString();
   } catch {
@@ -254,6 +257,9 @@ export function getStreamlitCandidatesUrl(sessionId?: string): string {
     let target = `${baseUrl}${sep}page=Candidates`;
     if (sessionId && sessionId.trim() !== "") {
       target += `&session_id=${encodeURIComponent(sessionId.trim())}`;
+      if (API_BASE_URL && API_BASE_URL.trim() !== "" && !API_BASE_URL.includes("localhost:8000")) {
+        target += `&api_url=${encodeURIComponent(API_BASE_URL.trim())}`;
+      }
     }
     return target;
   }

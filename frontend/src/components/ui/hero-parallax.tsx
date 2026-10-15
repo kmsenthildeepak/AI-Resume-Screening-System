@@ -191,8 +191,8 @@ export const Header = ({
 
       <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-neutral-800 text-neutral-400 text-xs sm:text-sm">
         <div>
-          <span className="block text-white font-semibold text-lg sm:text-xl">100% Local</span>
-          Private on-premise execution
+          <span className="block text-white font-semibold text-lg sm:text-xl">Zero LLMs</span>
+          Self-contained private engine
         </div>
         <div>
           <span className="block text-white font-semibold text-lg sm:text-xl">Multi-format</span>

@@ -264,15 +264,15 @@ The Streamlit application will be available at `http://localhost:8501`.
 
 | Service | Recommended Host | Configuration Variables |
 |---|---|---|
-| **React Frontend** | [Vercel](https://vercel.com/) | `VITE_API_BASE_URL` (points to deployed FastAPI URL)<br>`VITE_STREAMLIT_URL` (points to Streamlit app) |
-| **FastAPI Backend** | [Render](https://render.com/) / [Railway](https://railway.app/) / Cloud Run | `CORS_ORIGINS` (comma-separated allowed origins, e.g. `https://ai-resume-screening-system-nu.vercel.app`) |
-| **Streamlit Workspace** | [Streamlit Community Cloud](https://streamlit.io/cloud) | Built-in GitHub deployment |
+| **React Frontend** | [Vercel](https://vercel.com/) | `VITE_API_BASE_URL` (FastAPI backend URL, e.g. `https://ai-resume-screening-system-usr9.onrender.com`)<br>`VITE_STREAMLIT_URL` (Streamlit app URL, e.g. `https://ai-resume-screening-systems.streamlit.app`) |
+| **FastAPI Backend** | [Render](https://render.com/) / [Railway](https://railway.app/) / Cloud Run | `DATABASE_URL` (PostgreSQL connection string for durable cross-redeploy session persistence)<br>`CORS_ORIGINS` (comma-separated origins: `https://ai-resume-screening-system-nu.vercel.app,https://ai-resume-screening-systems.streamlit.app`)<br>`SESSION_STORAGE_DIR` (optional local storage dir)<br>`SESSION_DB_PATH` (optional SQLite database path) |
+| **Streamlit Workspace** | [Streamlit Community Cloud](https://streamlit.io/cloud) | `API_BASE_URL` in Streamlit Secrets (`.streamlit/secrets.toml` or dashboard Secrets) pointing to Render backend (retrieves screening sessions exclusively via the trusted FastAPI API) |
 
 ---
 
 ## 🧪 Automated Testing & Verification
 
-The project includes an automated test suite comprising **108 verified tests** across 9 test modules.
+The project includes an automated test suite comprising **122 verified tests** across 9 test modules.
 
 Run the test suite using the activated virtual environment or direct executable path:
 
@@ -288,7 +288,7 @@ pytest
 
 | Test Module | Tests | Scope & Assertions |
 |---|:---:|---|
-| [`tests/test_api.py`](tests/test_api.py) | 13 | Health check, validation errors, multi-candidate ranking, session caching, 404 handling, CSV export, corrupted document resilience, TTL eviction, 4 sample resumes regression, empty files validation, cross-process disk fallback, path traversal prevention, expired session handling |
+| [`tests/test_api.py`](tests/test_api.py) | 27 | Health check, validation errors, multi-candidate ranking, session caching, 404 handling, CSV export, corrupted document resilience, TTL eviction, 4 sample resumes regression, empty files validation, cross-process disk fallback, path traversal prevention, expired session handling, SSRF safe URL validation, multi-tier API URL hierarchy resolution, hosted cloud query URL hijacking prevention, SQLite persistence & Cache-Control security headers, cold-start timeout handling, Neon PostgreSQL session persistence & retrieval after cache clear, hosted non-durable status detection, fast failure when durable storage is mandated, Neon TLS URL normalization (`sslmode=require`), credential redaction logging, database connection failure handling, local dev SQLite fallback, post-startup database outage handling & graceful connection recovery |
 | [`tests/test_evidence.py`](tests/test_evidence.py) | 5 | Evidence tiers (`Impact`, `Experience`, `Project`), quantifiable metric detection, unverified skills warnings |
 | [`tests/test_fairness.py`](tests/test_fairness.py) | 5 | PII stripping invariance, demographic neutrality, tie-breaking determinism, vocabulary preservation |
 | [`tests/test_integration.py`](tests/test_integration.py) | 28 | Recruiter workflows, multipage state synchronization, queue retention across navigation, 12-candidate rendering |
@@ -297,7 +297,7 @@ pytest
 | [`tests/test_requirement_extractor.py`](tests/test_requirement_extractor.py) | 14 | Boundary-aware matching (`C++`, `C#`, `R`, `Go`, `.NET`), alias normalization, JD section segmentation |
 | [`tests/test_resume_parser.py`](tests/test_resume_parser.py) | 15 | PDF, DOCX, and TXT extraction, malformed document handling, size limit enforcement, contact info parsing |
 | [`tests/test_validation.py`](tests/test_validation.py) | 4 | CSV formula injection mitigation (`=`, `+`, `-`, `@`, `\t`, `\r`), non-dangerous whitespace preservation, UTF-8 safety |
-| **Total Verified** | **108** | **All passing** |
+| **Total Verified** | **122** | **All passing** |
 
 ---
 

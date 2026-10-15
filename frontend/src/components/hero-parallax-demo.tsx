@@ -69,11 +69,11 @@ export const atsProducts: ProductCardItem[] = [
     description: "Multi-year career trajectory evaluation against role tenure requirements.",
   },
   {
-    title: "100% Private On-Premise Processing",
+    title: "Self-Contained Private Processing",
     link: "#screening",
     thumbnail: "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=800&auto=format&fit=crop",
     category: "Enterprise Privacy",
-    description: "Zero external cloud data transfer; GDPR/compliance-ready local execution.",
+    description: "Self-contained deterministic engine; zero 3rd-party LLM data sharing.",
   },
   {
     title: "Cross-Navigation Session Preservation",
@@ -174,7 +174,7 @@ export function HeroParallaxDemo() {
                 Engineered for High-Velocity Talent Acquisition
               </p>
               <p className="mt-4 text-neutral-400 text-sm sm:text-base">
-                Discover how our hybrid local matching architecture empowers hiring teams to screen hundreds of candidates in seconds with mathematically grounded transparency.
+                Discover how our hybrid matching architecture empowers hiring teams to screen hundreds of candidates in seconds with mathematically grounded transparency.
               </p>
             </div>
 
@@ -203,9 +203,9 @@ export function HeroParallaxDemo() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 font-bold mb-4">
                   03
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">Zero-Leakage Privacy</h3>
+                <h3 className="text-lg font-semibold text-white mb-2">Self-Contained Architecture</h3>
                 <p className="text-sm text-neutral-400 leading-relaxed">
-                  Candidate resumes and proprietary job descriptions never leave your machine. Processing runs 100% locally in Python with no external cloud API requirements.
+                  Candidate resumes and proprietary job descriptions are processed with an internal pure-Python NLP pipeline without transmitting candidate data to external third-party AI APIs.
                 </p>
               </div>
             </div>

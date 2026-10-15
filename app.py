@@ -1061,14 +1061,119 @@ def compute_document_id(filename: str, file_bytes: bytes) -> str:
 
 SESSION_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_\-]{8,64}$")
 
+DEFAULT_PRODUCTION_API_URL = "https://ai-resume-screening-system-usr9.onrender.com"
+DEFAULT_LOCAL_API_URL = "http://localhost:8000"
 
-def fetch_screening_session(session_id: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+
+def is_safe_api_url(url: str) -> bool:
+    """Validate API URL against SSRF, dangerous IP ranges, and malformed hosts."""
+    if not url or not isinstance(url, str):
+        return False
+    clean = url.strip()
+    if clean.startswith("http://localhost:") or clean.startswith("http://127.0.0.1:"):
+        return True
+    if clean.startswith("https://"):
+        import urllib.parse
+        try:
+            parsed = urllib.parse.urlparse(clean)
+            if not parsed.netloc or not parsed.hostname:
+                return False
+            if "@" in parsed.netloc:
+                return False  # Disallow embedded credentials
+            hostname = parsed.hostname.lower()
+            if hostname in ("169.254.169.254", "metadata.google.internal", "localhost"):
+                return False
+            import ipaddress
+            try:
+                ip = ipaddress.ip_address(hostname)
+                if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                    return False
+            except ValueError:
+                # Valid domain name (e.g. onrender.com)
+                pass
+            return True
+        except Exception:
+            return False
+    return False
+
+
+def is_hosted_cloud_environment() -> bool:
+    """Detect whether app is running in Streamlit Community Cloud or managed cloud platform.
+    Relies on established cloud environment indicators, avoiding fragile filesystem checks.
+    """
+    cloud_indicators = (
+        "STREAMLIT_SERVER_BASE_URL",
+        "STREAMLIT_HOST",
+        "STREAMLIT_SHARING",
+        "STREAMLIT_COMMUNITY_CLOUD",
+        "KUBERNETES_SERVICE_HOST",
+        "RENDER",
+        "DYNO",
+        "FLY_ALLOC_ID",
+    )
+    for k in cloud_indicators:
+        if os.getenv(k):
+            return True
+    if os.getenv("IS_CLOUD", "").lower() in ("true", "1", "yes") or os.getenv("HOSTED_ENVIRONMENT", "").lower() in ("cloud", "production"):
+        return True
+    try:
+        if hasattr(st, "secrets") and (st.secrets.get("IS_CLOUD") or st.secrets.get("general", {}).get("IS_CLOUD")):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def resolve_api_base_url(query_api_url: Optional[str] = None) -> str:
+    """
+    Resolve FastAPI backend base URL using a strict trust hierarchy:
+    1. Streamlit secrets (`st.secrets["API_BASE_URL"]`) - Trusted configuration
+    2. Environment variable `API_BASE_URL` - Trusted configuration
+    3. Streamlit Community Cloud fallback (`DEFAULT_PRODUCTION_API_URL`):
+       In hosted cloud, user-supplied query parameters are IGNORED to prevent URL hijacking
+    4. Local development: query_api_url override (e.g. localhost testing or custom local port)
+    5. Local development fallback: `DEFAULT_LOCAL_API_URL`
+    """
+    # 1. Streamlit secrets (trusted)
+    try:
+        if hasattr(st, "secrets"):
+            sec = st.secrets.get("API_BASE_URL") or st.secrets.get("general", {}).get("API_BASE_URL")
+            if sec and str(sec).strip():
+                clean_sec = str(sec).strip().rstrip("/")
+                if is_safe_api_url(clean_sec):
+                    return clean_sec
+    except Exception:
+        pass
+
+    # 2. Environment variable (trusted)
+    env_val = os.getenv("API_BASE_URL", "").strip().rstrip("/")
+    if env_val and is_safe_api_url(env_val):
+        return env_val
+
+    # 3. Hosted cloud environment: ignore user-supplied query parameters and use fixed production fallback
+    if is_hosted_cloud_environment():
+        return DEFAULT_PRODUCTION_API_URL
+
+    # 4. Local development: allow query parameter overrides (e.g. localhost testing or custom port)
+    if query_api_url and isinstance(query_api_url, str):
+        candidate = query_api_url.strip().rstrip("/")
+        if is_safe_api_url(candidate):
+            return candidate
+
+    # 5. Local development fallback
+    return DEFAULT_LOCAL_API_URL
+
+
+def fetch_screening_session(
+    session_id: str,
+    query_api_url: Optional[str] = None
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     """Retrieve previously calculated screening session data by session_id.
 
     Validates session_id against strict regex, attempts retrieval from:
     1. In-process session store (if api.py is loaded in this runtime)
-    2. Shared filesystem store (.sessions/{session_id}.json) with 24-hour TTL check
-    3. FastAPI backend HTTP GET endpoint (/api/screening/{session_id}) with timeout
+    2. Shared SQLite persistent database or .sessions/{session_id}.json
+    3. FastAPI backend HTTP GET endpoint (/api/screening/{session_id}) with cold-start timeout
 
     Returns (session_data, error_message).
     """
@@ -1084,12 +1189,37 @@ def fetch_screening_session(session_id: str) -> Tuple[Optional[Dict[str, Any]], 
         from api import session_store
         data = session_store.get(clean_id)
         if data and isinstance(data, dict) and "results" in data:
+            if time.time() - float(data.get("timestamp", time.time())) > 86400:
+                return None, f"Screening session '{clean_id}' has expired (24-hour limit)."
             return data, None
     except Exception:
         pass
-
-    # 2. Shared filesystem storage (.sessions/{session_id}.json)
+    # 2. Local shared persistent storage (.sessions/sessions.db or .sessions/{id}.json)
     sessions_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".sessions")
+    db_path = os.getenv("SESSION_DB_PATH") or os.path.join(sessions_dir, "sessions.db")
+    if os.path.exists(db_path):
+        try:
+            import sqlite3
+            with sqlite3.connect(db_path, timeout=5.0) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT data, expires_at FROM screening_sessions WHERE screening_id = ?",
+                    (clean_id,),
+                )
+                row = cursor.fetchone()
+                if row:
+                    data_str, expires_at = row
+                    loaded = json.loads(data_str)
+                    ts = float(loaded.get("timestamp", time.time()))
+                    if time.time() <= expires_at and (time.time() - ts) <= 86400:
+                        if isinstance(loaded, dict) and "results" in loaded:
+                            return loaded, None
+                    else:
+                        return None, f"Screening session '{clean_id}' has expired (24-hour limit)."
+        except Exception:
+            pass
+
+    # Filesystem JSON fallback
     file_path = os.path.join(sessions_dir, f"{clean_id}.json")
     if os.path.exists(file_path):
         try:
@@ -1103,26 +1233,32 @@ def fetch_screening_session(session_id: str) -> Tuple[Optional[Dict[str, Any]], 
         except Exception:
             pass
 
-    # 3. FastAPI backend HTTP GET endpoint
-    api_base_url = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
+    # 3. FastAPI backend HTTP GET endpoint with cold-start tolerance
+    api_base_url = resolve_api_base_url(query_api_url)
     api_url = f"{api_base_url}/api/screening/{clean_id}"
     try:
         req = urllib.request.Request(api_url, headers={"User-Agent": "Streamlit-ATS"})
-        with urllib.request.urlopen(req, timeout=3.0) as resp:
+        # 25.0s timeout to allow for Render free-tier cold-starts
+        with urllib.request.urlopen(req, timeout=25.0) as resp:
             if resp.status == 200:
                 payload = json.loads(resp.read().decode("utf-8"))
                 if isinstance(payload, dict) and "results" in payload:
                     return payload, None
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            return None, f"Screening session '{clean_id}' was not found. It may have expired or the backend was restarted."
+            return None, f"Screening session '{clean_id}' was not found on backend ({api_base_url}). Sessions expire after 24 hours or when the backend restarts."
         elif e.code == 400:
             return None, f"Invalid screening session ID format: '{clean_id}'."
-        return None, f"Failed to retrieve screening session (HTTP {e.code})."
-    except Exception:
-        pass
+        return None, f"Failed to retrieve screening session from {api_base_url} (HTTP {e.code})."
+    except (urllib.error.URLError, TimeoutError) as e:
+        reason = getattr(e, "reason", str(e))
+        if "timed out" in str(reason).lower() or isinstance(e, TimeoutError):
+            return None, f"Screening backend at {api_base_url} timed out (the free-tier service may be waking from sleep). Please click 'Retry' to connect again."
+        return None, f"Screening session '{clean_id}' not found (could not connect to backend at {api_base_url}: {reason})."
+    except Exception as e:
+        return None, f"Screening session '{clean_id}' not found (unexpected error connecting to {api_base_url}: {str(e)})."
 
-    return None, f"Screening session '{clean_id}' not found. Please verify the session ID or re-screen candidates."
+    return None, f"Screening session '{clean_id}' not found on backend ({api_base_url}). Please verify the session ID or re-screen candidates."
 
 
 def prune_screening_results(removed_doc_ids: set, removed_filenames: set = None, state=None):
@@ -1332,7 +1468,7 @@ def render_sidebar_nav() -> str:
         st.markdown("<div style='margin-top: 1.25rem; border-top: 1px solid var(--ats-border); padding-top: 0.85rem;'></div>", unsafe_allow_html=True)
         st.markdown(
             "<div style='font-size: 0.71875rem; color: var(--ats-text-muted); line-height: 1.5;'>"
-            "Privacy Standard: <strong>100% Local Processing</strong><br>"
+            "Privacy Standard: <strong>Dedicated Private Engine (Zero 3rd-Party LLMs)</strong><br>"
             "Ethical Standard: <strong>Decision-Support</strong> (No auto-reject)"
             "</div>",
             unsafe_allow_html=True
@@ -1387,10 +1523,15 @@ def render_page_candidates():
     # Session Import Notice / Error Callouts
     if st.session_state.get("_session_import_error"):
         err = st.session_state["_session_import_error"]
-        err_col1, err_col2 = st.columns([5, 1])
+        err_col1, err_col2, err_col3 = st.columns([5, 1, 1])
         with err_col1:
             st.error(f"⚠️ **Session Transfer Notice:** {err}")
         with err_col2:
+            if st.button("🔄 Retry", key="btn_retry_session_err", use_container_width=True):
+                st.session_state.pop("_session_import_error", None)
+                st.session_state.pop("_loaded_session_id", None)
+                st.rerun()
+        with err_col3:
             if st.button("Dismiss", key="btn_dismiss_session_err", use_container_width=True):
                 st.session_state.pop("_session_import_error", None)
                 st.session_state.pop("_loaded_session_id", None)
@@ -2357,7 +2498,8 @@ def main():
     if query_session_id:
         current_loaded = st.session_state.get("_loaded_session_id")
         if current_loaded != query_session_id:
-            data, err = fetch_screening_session(query_session_id)
+            query_api_url = st.query_params.get("api_url") or st.query_params.get("backend_url")
+            data, err = fetch_screening_session(query_session_id, query_api_url)
             st.session_state["_loaded_session_id"] = query_session_id
             if data:
                 st.session_state["nav_page"] = "Candidates"
